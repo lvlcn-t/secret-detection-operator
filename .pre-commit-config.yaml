@@ -1,0 +1,45 @@
+ci:
+  autofix_commit_msg: |
+    fix(deps): [pre-commit.ci] auto fixes\n\nFor more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_commit_msg: |
+    chore(deps): [pre-commit.ci] auto update\n\nFor more information, see https://pre-commit.ci
+  autoupdate_schedule: weekly
+
+repos:
+  - repo: local
+    hooks:
+      - id: go-generate-repo
+        name: go generate
+        entry: go
+        args: [generate, ./...]
+        language: system
+        types: [go]
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-mod-tidy-repo
+      - id: go-test-repo-mod
+        args: [-race, -count=1, -test.short]
+      - id: go-vet-repo-mod
+      - id: go-fumpt-repo
+        args: [-l, -w]
+      - id: golangci-lint-repo-mod
+        args: [--config, .golangci.yaml, --, --fix]
+
+  - repo: https://github.com/norwoodj/helm-docs
+    rev: v1.13.1
+    hooks:
+      - id: helm-docs
+        args:
+          - --chart-search-root=chart
+
+  # If this is used for business, a free license is required.
+  # It can be obtained from https://gitleaks.io/products.html
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.2
+    hooks:
+      - id: gitleaks

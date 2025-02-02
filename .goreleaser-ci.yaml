@@ -1,0 +1,27 @@
+project_name: meta
+snapshot:
+  name_template: "commit-{{ .ShortCommit }}"
+builds:
+  - env: [CGO_ENABLED=0]
+    main: ./cmd/app
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+      - -extldflags "-static"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+dockers:
+  - image_templates:
+      - "ghcr.io/lvlcn-t/meta:{{ .Version }}"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description="This is a pre-release version. Do not use this in production!"
+      - --label=org.opencontainers.image.url=https://lvlcn-t.dev
+      - --label=org.opencontainers.image.source=https://github.com/lvlcn-t/meta
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ .Timestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses="MIT"

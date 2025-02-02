@@ -1,0 +1,38 @@
+project_name: meta
+builds:
+  - env: [CGO_ENABLED=0]
+    main: ./cmd/app
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+      - -extldflags "-static"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+dockers:
+  - image_templates:
+      - "ghcr.io/lvlcn-t/meta:latest"
+      - "ghcr.io/lvlcn-t/meta:{{ .Tag }}"
+      - "ghcr.io/lvlcn-t/meta:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/lvlcn-t/meta:v{{ .Major }}"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://lvlcn-t.dev
+      - --label=org.opencontainers.image.source=https://github.com/lvlcn-t/meta
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ .Timestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses="MIT"
+# nfpms:
+#   - maintainer: lvlcn-t <75443136+lvlcn-t@users.noreply.github.com>
+#     description: |-
+#       #
+#     homepage: https://github.com/lvlcn-t
+#     license: MIT
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
