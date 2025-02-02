@@ -1,0 +1,18 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    uses: lvlcn-t/meta/.github/workflows/release-go.yml@main
+    with:
+      go_version_file: go.mod
+    secrets: inherit

@@ -1,0 +1,20 @@
+name: Continuous Integration
+
+on: [push]
+
+permissions:
+  actions: read
+  contents: write
+  packages: write
+  security-events: write
+
+jobs:
+  go:
+    uses: lvlcn-t/meta/.github/workflows/ci-go.yml@main
+    with:
+      go_version_file: go.mod
+      go_releaser_config: .goreleaser-ci.yaml
+    secrets: inherit
+
+  helm:
+    uses: lvlcn-t/meta/.github/workflows/ci-helm.yml@main
