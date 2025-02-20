@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.2
 
 require (
-	github.com/zricethezav/gitleaks/v8 v8.23.3
+	github.com/zricethezav/gitleaks/v8 v8.24.0
 	k8s.io/api v0.32.1
 	k8s.io/apimachinery v0.32.1
 	sigs.k8s.io/controller-runtime v0.20.1
@@ -76,8 +76,8 @@ require (
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tetratelabs/wazero v1.8.2 // indirect
-	github.com/wasilibs/go-re2 v1.8.0 // indirect
+	github.com/tetratelabs/wazero v1.9.0 // indirect
+	github.com/wasilibs/go-re2 v1.9.0 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20250123031827-cd30c44769bb // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
