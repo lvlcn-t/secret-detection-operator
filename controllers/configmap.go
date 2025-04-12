@@ -77,7 +77,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		if errors.IsNotFound(err) {
-			newES := newExposedSecret(cfgMap, key, r, value)
+			newES := newExposedSecret(&cfgMap, key, r, value)
 			if err := r.Create(ctx, newES); err != nil {
 				log.ErrorContext(ctx, "Failed to create ExposedSecret", "error", err)
 				return ctrl.Result{}, err
@@ -90,10 +90,10 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		switch existing.Spec.Action {
 		case v1alpha1.ReportOnly:
 			log.DebugContext(ctx, "Updating ExposedSecret status")
-			r.handleReportOnly(ctx, &existing, cfgMap, key, value)
+			r.handleReportOnly(ctx, &existing, &cfgMap, key, value)
 		case v1alpha1.AutoRemediate:
 			log.DebugContext(ctx, "Creating Secret and updating ExposedSecret status")
-			r.handleAutoRemediate(ctx, &existing, cfgMap, key, value)
+			r.handleAutoRemediate(ctx, &existing, &cfgMap, key, value)
 		case v1alpha1.Ignore:
 			log.DebugContext(ctx, "Ignoring ExposedSecret")
 			r.handleIgnore(ctx, &existing)
@@ -108,7 +108,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 // prepareStatus sets common status fields.
-func (r *ConfigMapReconciler) prepareStatus(es *v1alpha1.ExposedSecret, cfgMap corev1.ConfigMap, key string, value string) {
+func (r *ConfigMapReconciler) prepareStatus(es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
 	es.Status.ConfigMapReference.Name = cfgMap.Name
 	es.Status.Key = key
 	es.Status.DetectedValue = r.hashSecret(value)
@@ -118,7 +118,7 @@ func (r *ConfigMapReconciler) prepareStatus(es *v1alpha1.ExposedSecret, cfgMap c
 }
 
 // handleReportOnly updates the status for ReportOnly action.
-func (r *ConfigMapReconciler) handleReportOnly(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap corev1.ConfigMap, key, value string) {
+func (r *ConfigMapReconciler) handleReportOnly(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
 	log := logr.FromContextAsSlogLogger(ctx)
 	r.prepareStatus(es, cfgMap, key, value)
 	es.Status.Message = fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfgMap.Name, key)
@@ -133,7 +133,7 @@ func (r *ConfigMapReconciler) handleReportOnly(ctx context.Context, es *v1alpha1
 }
 
 // handleAutoRemediate creates a Secret and updates the status for AutoRemediate action.
-func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap corev1.ConfigMap, key, value string) {
+func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
 	log := logr.FromContextAsSlogLogger(ctx)
 	r.prepareStatus(es, cfgMap, key, value)
 	es.Status.Message = fmt.Sprintf("Secret auto-remediated from ConfigMap %q for key %q", cfgMap.Name, key)
@@ -177,7 +177,7 @@ func (r *ConfigMapReconciler) handleIgnore(ctx context.Context, es *v1alpha1.Exp
 }
 
 // newExposedSecret creates a new ExposedSecret resource with common fields pre-filled.
-func newExposedSecret(cfgMap corev1.ConfigMap, key string, r *ConfigMapReconciler, value string) *v1alpha1.ExposedSecret {
+func newExposedSecret(cfgMap *corev1.ConfigMap, key string, r *ConfigMapReconciler, value string) *v1alpha1.ExposedSecret {
 	es := &v1alpha1.ExposedSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", cfgMap.Name, key),
@@ -212,7 +212,7 @@ func (r *ConfigMapReconciler) extractSecrets(ctx context.Context, cm *corev1.Con
 		if r.scanner.IsSecret(value) {
 			secretData[key] = value
 			found = true
-			log.InfoContext(ctx, "Detected secret value in ConfigMap", "ConfigMap", cm.ObjectMeta.Name, "key", key)
+			log.InfoContext(ctx, "Detected secret value in ConfigMap", "ConfigMap", cm.Name, "key", key)
 		}
 	}
 	return secretData, found
