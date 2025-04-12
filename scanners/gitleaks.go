@@ -7,6 +7,8 @@ import (
 
 // Secret is an interface for scanning text for secret values.
 type Secret interface {
+	// Name returns the name of the scanner.
+	Name() string
 	// IsSecret returns true if the given text is considered a secret value.
 	IsSecret(value string) bool
 }
@@ -22,6 +24,10 @@ func Gitleaks() (Secret, error) {
 		return nil, err
 	}
 	return gitleaksScanner{detector: detect.NewDetector(cfg)}, nil
+}
+
+func (s gitleaksScanner) Name() string {
+	return "Gitleaks"
 }
 
 func (s gitleaksScanner) IsSecret(value string) bool {

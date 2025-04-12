@@ -1,0 +1,11 @@
+domain: lvlcn-t.dev
+layout: go.kubebuilder.io/v4
+repo: github.com/lvlcn-t/secret-detection-operator
+version: "4"
+resources:
+  - group: ""
+    kind: ConfigMap
+    version: v1
+  - group: secretdetection.lvlcn-t.dev
+    kind: ExposedSecret
+    version: v1alpha1

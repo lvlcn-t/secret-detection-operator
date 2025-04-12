@@ -32,3 +32,4 @@ go.work
 
 # Temporary directory
 .tmp/
+bin/*

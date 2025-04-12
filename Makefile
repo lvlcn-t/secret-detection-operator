@@ -1,9 +1,19 @@
-.DEFAULT_GOAL := dev
+.DEFAULT_GOAL := generate
 SHELL := /bin/bash
 
-.PHONY: dev
-dev:
-	@go run cmd/app/main.go
+CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 
-lint:
-	@pre-commit run -a --hook-stage pre-commit
+.PHONY: generate manifests $(CONTROLLER_GEN)
+
+generate: $(CONTROLLER_GEN) ## Run code generation for deepcopy, defaults, etc.
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+manifests: $(CONTROLLER_GEN) ## Generate CRD YAMLs
+	$(CONTROLLER_GEN) rbac:roleName=secret-detection-operator crd \
+		paths="./apis/..." \
+		paths="./controllers" \
+		output:crd:dir=config/crd/bases \
+		output:rbac:dir=config/rbac
+
+$(CONTROLLER_GEN):
+	GOBIN=$(shell pwd)/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest

@@ -1,9 +1,9 @@
-# Project Name<!-- omit from toc -->
+# Secret Detection Operator<!-- omit from toc -->
 
 <!-- markdownlint-disable-next-line -->
 <p align="center">
-    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/meta?style=flat"></a>
-    <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/meta?style=flat"></a>
+    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/secret-detection-operator?style=flat"></a> 
+    <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/secret-detection-operator?style=flat"></a>
 </p>
 
 - [About this component](#about-this-component)
@@ -19,35 +19,42 @@
 - [How to Contribute](#how-to-contribute)
 - [Licensing](#licensing)
 
-_tbd_
-
 ## About this component
 
-_tbd_
+The **Secret Detection Operator** is a Kubernetes operator designed to detect secret values stored insecurely in ConfigMaps and optionally remediate them by migrating these secrets into dedicated Secret objects. Detected secrets are reported via a custom Kubernetes resource (`ExposedSecret`), which can be configured for reporting only, automatic remediation, or explicit ignoring.
 
 ## Installation
 
-_tbd_
+You can deploy the Secret Detection Operator using one of the methods described below:
 
-### Binary
+### Kustomize
 
-_tbd_
+To deploy the operator using Kustomize, you can use the following command:
 
-### Container Image
-
-_tbd_
+```shell
+kubectl apply -k "github.com/lvlcn-t/secret-detection-operator/config/default?ref=main"
+```
 
 ### Helm
 
-_tbd_
+Deploy via Helm chart:
+
+```shell
+helm upgrade -i secret-detection-operator oci://ghcr.io/lvlcn-t/charts/secret-detection-operator \
+  --version 0.1.0 \
+  --namespace secret-detection-system \
+  --create-namespace \
+```
 
 ## Usage
 
-_tbd_
+The operator scans all ConfigMaps in your Kubernetes namespaces. If it detects secret-like values, it creates or updates an `ExposedSecret` custom resource.
 
-### Image
+By default, secrets are reported but not automatically remediated. You can adjust behavior via the `action` field in the `ExposedSecret` custom resource:
 
-_tbd_
+- `ReportOnly` (default): Report the secret without remediation.
+- `AutoRemediate`: Automatically move the secret value into a dedicated Secret object.
+- `Ignore`: Explicitly ignore and do not act upon this detection.
 
 ## Code of Conduct
 
@@ -70,7 +77,7 @@ The following channels are available for discussions, feedback, and support requ
 
 | Type       | Channel                                                                                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
-| **Issues** | [![General Discussion](https://img.shields.io/github/issues/lvlcn-t/meta?style=flat-square)](/../../issues/new/choose) |
+| **Issues** | [![General Discussion](https://img.shields.io/github/issues/lvlcn-t/secret-detection-operator?style=flat-square)](/../../issues/new/choose) |
 
 ## How to Contribute
 

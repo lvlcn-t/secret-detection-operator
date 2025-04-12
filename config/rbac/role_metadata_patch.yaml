@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: secret-detection-operator
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/managed-by: kubebuilder
+  annotations:
+    description: Grants permission to manage exposed secrets

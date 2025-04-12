@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - bases/
+
+commonLabels:
+  app.kubernetes.io/name: secret-detection-operator
+  app.kubernetes.io/part-of: secret-detection
+  app.kubernetes.io/version: v0.1.0
+  app.kubernetes.io/managed-by: kustomize
