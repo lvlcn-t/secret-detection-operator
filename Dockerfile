@@ -1,4 +1,4 @@
-FROM alpine:3.21 as prep
+FROM alpine:3.21 AS prep
 
 RUN apk add --no-cache ca-certificates
 RUN adduser \
@@ -12,11 +12,9 @@ RUN adduser \
 FROM scratch
 COPY --from=prep /etc/passwd /etc/passwd
 COPY --from=prep /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-# ! Adjust the binary name to match the name of the binary that is built
-# In case of a Go binary, the binary name is the project name defined in
-# your .goreleaser.yml configuration file
-COPY meta ./
+
+COPY secret-detection-operator ./
 
 USER appuser
 
-ENTRYPOINT ["/meta"]
+ENTRYPOINT ["/secret-detection-operator"]

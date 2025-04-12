@@ -4,7 +4,6 @@ import (
 	"flag"
 	"os"
 
-	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	"github.com/lvlcn-t/secret-detection-operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,12 +14,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-var (
-	scheme   = runtime.NewScheme()
-	setupLog logr.Logger
-)
+var scheme = runtime.NewScheme()
 
-func init() {
+// version is set on build time.
+// Use -ldflags "-X main.version=1.0.0" to set the version.
+var version string
+
+func init() { //nolint:gochecknoinits // Common pattern for controller-runtime
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 }
@@ -36,7 +36,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-	setupLog = ctrl.Log.WithName("setup")
+	setupLog := ctrl.Log.WithName("setup")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -46,19 +46,19 @@ func main() {
 		HealthProbeBindAddress: ":8081",
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "Unable to start manager")
 		os.Exit(1)
 	}
 
 	if err = (controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme())).
 		SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConfigMap")
+		setupLog.Error(err, "Unable to create controller", "controller", "ConfigMap")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("Starting manager", "version", version)
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+		setupLog.Error(err, "Problem running manager")
 		os.Exit(1)
 	}
 }
