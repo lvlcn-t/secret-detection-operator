@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/config"
 	"github.com/lvlcn-t/secret-detection-operator/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -26,10 +27,8 @@ func init() { //nolint:gochecknoinits // Common pattern for controller-runtime
 }
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address for the metrics endpoint")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election")
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "Path to the configuration file")
 
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
@@ -38,20 +37,31 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
 
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		setupLog.Error(err, "Unable to load configuration")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                server.Options{BindAddress: metricsAddr},
-		LeaderElection:         enableLeaderElection,
+		Metrics:                server.Options{BindAddress: cfg.MetricsAddr},
+		LeaderElection:         cfg.LeaderElect,
 		LeaderElectionID:       "secret-detection-operator",
-		HealthProbeBindAddress: ":8081",
+		HealthProbeBindAddress: cfg.HealthAddr,
 	})
 	if err != nil {
 		setupLog.Error(err, "Unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme())).
-		SetupWithManager(mgr); err != nil {
+	controller, err := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme(), cfg.ConfigMapReconciler)
+	if err != nil {
+		setupLog.Error(err, "Unable to create ConfigMapReconciler")
+		os.Exit(1)
+	}
+
+	if err = controller.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "ConfigMap")
 		os.Exit(1)
 	}

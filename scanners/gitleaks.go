@@ -5,19 +5,11 @@ import (
 	"github.com/zricethezav/gitleaks/v8/detect"
 )
 
-// Secret is an interface for scanning text for secret values.
-type Secret interface {
-	// Name returns the name of the scanner.
-	Name() string
-	// IsSecret returns true if the given text is considered a secret value.
-	IsSecret(value string) bool
-}
-
 type gitleaksScanner struct {
 	detector *detect.Detector
 }
 
-func Gitleaks() (Secret, error) {
+func NewGitleaksScanner() (Secret, error) {
 	c := config.ViperConfig{}
 	cfg, err := c.Translate()
 	if err != nil {
@@ -27,7 +19,7 @@ func Gitleaks() (Secret, error) {
 }
 
 func (s gitleaksScanner) Name() string {
-	return "Gitleaks"
+	return Gitleaks.String()
 }
 
 func (s gitleaksScanner) IsSecret(value string) bool {

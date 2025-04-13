@@ -2,8 +2,6 @@ package controllers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -30,20 +28,23 @@ var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 type ConfigMapReconciler struct {
 	client.Client
 	scheme  *runtime.Scheme
+	config  *ConfigMapReconcilerOptions
 	scanner scanners.Secret
 }
 
 // NewConfigMapReconciler creates a new ConfigMapReconciler.
-func NewConfigMapReconciler(c client.Client, s *runtime.Scheme) *ConfigMapReconciler {
-	scanner, err := scanners.Gitleaks()
+func NewConfigMapReconciler(c client.Client, s *runtime.Scheme, cfg *ConfigMapReconcilerOptions) (*ConfigMapReconciler, error) {
+	scanner, err := cfg.GetScanner()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to create scanner %q: %w", cfg.Scanner, err)
 	}
+
 	return &ConfigMapReconciler{
 		Client:  c,
 		scheme:  s,
+		config:  cfg,
 		scanner: scanner,
-	}
+	}, nil
 }
 
 // Reconcile implements the controller-runtime Reconciler interface.
@@ -77,7 +78,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		if errors.IsNotFound(err) {
-			newES := newExposedSecret(&cfgMap, key, r, value)
+			newES := newExposedSecret(r, &cfgMap, key, value)
 			if err := r.Create(ctx, newES); err != nil {
 				log.ErrorContext(ctx, "Failed to create ExposedSecret", "error", err)
 				return ctrl.Result{}, err
@@ -97,7 +98,6 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		case v1alpha1.Ignore:
 			log.DebugContext(ctx, "Ignoring ExposedSecret")
 			r.handleIgnore(ctx, &existing)
-			continue
 		default:
 			log.ErrorContext(ctx, "Unknown action in ExposedSecret")
 			return ctrl.Result{}, fmt.Errorf("unknown action %q in ExposedSecret", existing.Spec.Action)
@@ -111,7 +111,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 func (r *ConfigMapReconciler) prepareStatus(es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
 	es.Status.ConfigMapReference.Name = cfgMap.Name
 	es.Status.Key = key
-	es.Status.DetectedValue = r.hashSecret(value)
+	es.Status.DetectedValue = r.config.HashingAlgorithm.Hash(value)
 	es.Status.Scanner = r.scanner.Name()
 	es.Status.LastUpdateTime = metav1.Now()
 	es.Status.ObservedGeneration = cfgMap.GetGeneration()
@@ -177,7 +177,7 @@ func (r *ConfigMapReconciler) handleIgnore(ctx context.Context, es *v1alpha1.Exp
 }
 
 // newExposedSecret creates a new ExposedSecret resource with common fields pre-filled.
-func newExposedSecret(cfgMap *corev1.ConfigMap, key string, r *ConfigMapReconciler, value string) *v1alpha1.ExposedSecret {
+func newExposedSecret(r *ConfigMapReconciler, cfgMap *corev1.ConfigMap, key, value string) *v1alpha1.ExposedSecret {
 	es := &v1alpha1.ExposedSecret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", cfgMap.Name, key),
@@ -193,7 +193,7 @@ func newExposedSecret(cfgMap *corev1.ConfigMap, key string, r *ConfigMapReconcil
 	// Initialize status fields.
 	es.Status.ConfigMapReference.Name = cfgMap.Name
 	es.Status.Key = key
-	es.Status.DetectedValue = r.hashSecret(value)
+	es.Status.DetectedValue = r.config.HashingAlgorithm.Hash(value)
 	es.Status.Scanner = r.scanner.Name()
 	es.Status.Message = fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfgMap.Name, key)
 	es.Status.Phase = v1alpha1.PhaseDetected
@@ -216,12 +216,6 @@ func (r *ConfigMapReconciler) extractSecrets(ctx context.Context, cm *corev1.Con
 		}
 	}
 	return secretData, found
-}
-
-// hashSecret hashes the secret value using SHA-256 and prefixes the result with "sha256:".
-func (r *ConfigMapReconciler) hashSecret(secret string) string {
-	hash := sha256.Sum256([]byte(secret))
-	return "sha256:" + hex.EncodeToString(hash[:])
 }
 
 // SetupWithManager registers this reconciler with the manager.
