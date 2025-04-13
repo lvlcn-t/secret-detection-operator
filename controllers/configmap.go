@@ -184,9 +184,8 @@ func newExposedSecret(r *ConfigMapReconciler, cfgMap *corev1.ConfigMap, key, val
 			Namespace: cfgMap.Namespace,
 		},
 		Spec: v1alpha1.ExposedSecretSpec{
-			// Defaults to ReportOnly; users can change this later.
-			Action:   v1alpha1.ReportOnly,
-			Severity: v1alpha1.Medium,
+			Action:   r.config.DefaultAction,
+			Severity: r.config.DefaultSeverity,
 			Notes:    "Automatically reported by secret-detection-operator",
 		},
 	}
