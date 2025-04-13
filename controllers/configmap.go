@@ -67,7 +67,7 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// For each offending key, create or update an ExposedSecret resource.
 	for key, value := range secretData {
-		exposedSecretName := fmt.Sprintf("%s-%s", cfgMap.Name, key)
+		exposedSecretName := v1alpha1.NewExposedSecretName(&cfgMap, key)
 		log = log.With("ExposedSecret", exposedSecretName)
 
 		var existing v1alpha1.ExposedSecret
@@ -140,7 +140,7 @@ func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, es *v1alp
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", cfgMap.Name, key),
+			Name:      v1alpha1.NewExposedSecretName(cfgMap, key),
 			Namespace: cfgMap.Namespace,
 		},
 		StringData: map[string]string{
@@ -180,7 +180,7 @@ func (r *ConfigMapReconciler) handleIgnore(ctx context.Context, es *v1alpha1.Exp
 func newExposedSecret(r *ConfigMapReconciler, cfgMap *corev1.ConfigMap, key, value string) *v1alpha1.ExposedSecret {
 	es := &v1alpha1.ExposedSecret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", cfgMap.Name, key),
+			Name:      v1alpha1.NewExposedSecretName(cfgMap, key),
 			Namespace: cfgMap.Namespace,
 		},
 		Spec: v1alpha1.ExposedSecretSpec{

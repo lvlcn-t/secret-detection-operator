@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -115,6 +118,12 @@ type ExposedSecret struct {
 
 	Spec   ExposedSecretSpec   `json:"spec,omitempty"`
 	Status ExposedSecretStatus `json:"status,omitempty"`
+}
+
+// NewExposedSecretName creates a new name for the ExposedSecret based on
+// the ConfigMap name and the key that contains the exposed secret.
+func NewExposedSecretName(cfgMap *corev1.ConfigMap, key string) string {
+	return fmt.Sprintf("%s-%s", cfgMap.Name, key)
 }
 
 // +kubebuilder:object:root=true
