@@ -12,13 +12,13 @@ type Gitleaks struct {
 	detector *detect.Detector
 }
 
-func NewGitleaksScanner() Gitleaks {
+func NewGitleaksScanner() *Gitleaks {
 	c := config.ViperConfig{}
 	cfg, err := c.Translate()
 	if err != nil {
 		panic(fmt.Errorf("failed to translate gitleaks config: %v", err))
 	}
-	return Gitleaks{detector: detect.NewDetector(cfg)}
+	return &Gitleaks{detector: detect.NewDetector(cfg)}
 }
 
 func (g *Gitleaks) IsSecret(value string) bool {

@@ -21,7 +21,7 @@ type Scanner interface {
 var _ Scanner = (*Gitleaks)(nil)
 
 var scanners = map[v1alpha1.ScannerName]Scanner{
-	"gitleaks": &Gitleaks{},
+	"gitleaks": NewGitleaksScanner(),
 }
 
 // Get returns the scanner for the given name.
