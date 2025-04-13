@@ -4,15 +4,12 @@ import (
 	"reflect"
 
 	"github.com/lvlcn-t/go-kit/config"
-	"github.com/lvlcn-t/secret-detection-operator/controllers"
 )
 
 type Config struct {
 	MetricsAddr string `json:"metricsAddr,omitempty"`
 	HealthAddr  string `json:"healthAddr,omitempty"`
 	LeaderElect bool   `json:"leaderElect,omitempty"`
-
-	ConfigMapReconciler *controllers.ConfigMapReconcilerOptions `json:"configMap,omitempty"`
 }
 
 func (c *Config) IsEmpty() bool {
@@ -28,9 +25,6 @@ func (c *Config) WithDefaults() *Config {
 	}
 	if c.HealthAddr == "" {
 		c.HealthAddr = ":8080"
-	}
-	if c.ConfigMapReconciler == nil {
-		c.ConfigMapReconciler = (&controllers.ConfigMapReconcilerOptions{}).WithDefaults()
 	}
 	return c
 }

@@ -1,45 +1,7 @@
 package v1alpha1
 
 import (
-	"fmt"
-
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-type Action string
-
-const (
-	// ReportOnly indicates that the secret should be reported but not remediated
-	ReportOnly Action = "ReportOnly"
-	// AutoRemediate indicates that the secret should be remediated automatically
-	AutoRemediate Action = "AutoRemediate"
-	// Ignore indicates that the secret should be ignored
-	Ignore Action = "Ignore"
-)
-
-type Severity string
-
-const (
-	// Low indicates a low severity secret
-	Low Severity = "Low"
-	// Medium indicates a medium severity secret
-	Medium Severity = "Medium"
-	// High indicates a high severity secret
-	High Severity = "High"
-	// Critical indicates a critical severity secret
-	Critical Severity = "Critical"
-)
-
-type Phase string
-
-const (
-	// PhaseDetected means the secret was found but not acted upon yet
-	PhaseDetected Phase = "Detected"
-	// PhaseRemediated means the secret was moved to a Secret
-	PhaseRemediated Phase = "Remediated"
-	// PhaseIgnored means the finding was explicitly ignored
-	PhaseIgnored Phase = "Ignored"
 )
 
 // ConfigMapReference is a reference to a ConfigMap that contains the secret value.
@@ -65,7 +27,7 @@ type ExposedSecretSpec struct {
 	Action Action `json:"action,omitempty"`
 
 	// Severity indicates how serious the secret exposure is
-	// +kubebuilder:validation:Enum=Low;Medium;High;Critical
+	// +kubebuilder:validation:Enum=Unknown;Low;Medium;High;Critical
 	// +kubebuilder:default=Medium
 	Severity Severity `json:"severity,omitempty"`
 
@@ -118,12 +80,6 @@ type ExposedSecret struct {
 
 	Spec   ExposedSecretSpec   `json:"spec,omitempty"`
 	Status ExposedSecretStatus `json:"status,omitempty"`
-}
-
-// NewExposedSecretName creates a new name for the ExposedSecret based on
-// the ConfigMap name and the key that contains the exposed secret.
-func NewExposedSecretName(cfgMap *corev1.ConfigMap, key string) string {
-	return fmt.Sprintf("%s-%s", cfgMap.Name, key)
 }
 
 // +kubebuilder:object:root=true

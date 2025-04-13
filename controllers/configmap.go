@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
@@ -18,7 +19,7 @@ import (
 
 var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets/status,verbs=get;update;patch
@@ -27,24 +28,15 @@ var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 // to a corresponding Secret and reports findings via ExposedSecret custom resources.
 type ConfigMapReconciler struct {
 	client.Client
-	scheme  *runtime.Scheme
-	config  *ConfigMapReconcilerOptions
-	scanner scanners.Secret
+	scheme *runtime.Scheme
 }
 
 // NewConfigMapReconciler creates a new ConfigMapReconciler.
-func NewConfigMapReconciler(c client.Client, s *runtime.Scheme, cfg *ConfigMapReconcilerOptions) (*ConfigMapReconciler, error) {
-	scanner, err := cfg.GetScanner()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create scanner %q: %w", cfg.Scanner, err)
-	}
-
+func NewConfigMapReconciler(c client.Client, s *runtime.Scheme) *ConfigMapReconciler {
 	return &ConfigMapReconciler{
-		Client:  c,
-		scheme:  s,
-		config:  cfg,
-		scanner: scanner,
-	}, nil
+		Client: c,
+		scheme: s,
+	}
 }
 
 // Reconcile implements the controller-runtime Reconciler interface.
@@ -52,91 +44,159 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log := logr.FromContextAsSlogLogger(ctx)
 	log.InfoContext(ctx, "Reconciling ConfigMap", "ConfigMap", req.NamespacedName)
 
+	policy, err := r.loadScanPolicy(ctx, req.Namespace)
+	if err != nil {
+		log.ErrorContext(ctx, "Failed to get ScanPolicy", "error", err)
+		return ctrl.Result{}, err
+	}
+
 	var cfgMap corev1.ConfigMap
-	if err := r.Get(ctx, req.NamespacedName, &cfgMap); err != nil {
+	if err = r.Get(ctx, req.NamespacedName, &cfgMap); err != nil {
 		log.WarnContext(ctx, "Failed to get ConfigMap", "error", err)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	secretData, found := r.extractSecrets(ctx, &cfgMap)
+	// Create a ruleset based on the policy.
+	ruleset := NewPolicyRuleset(policy)
+	scanner := ruleset.Scanner()
+
+	keys, found := r.getSecretKeys(scanner, &cfgMap)
 	if !found {
-		// No secrets found, so there is nothing to do.
-		log.DebugContext(ctx, "No secrets found in ConfigMap", "ConfigMap", cfgMap.Name)
+		log.DebugContext(ctx, "No secret-like keys found in ConfigMap")
 		return ctrl.Result{}, nil
 	}
 
-	// For each offending key, create or update an ExposedSecret resource.
-	for key, value := range secretData {
-		exposedSecretName := v1alpha1.NewExposedSecretName(&cfgMap, key)
-		log = log.With("ExposedSecret", exposedSecretName)
-
-		var existing v1alpha1.ExposedSecret
-		err := r.Get(ctx, client.ObjectKey{Namespace: cfgMap.Namespace, Name: exposedSecretName}, &existing)
-		if err != nil && !errors.IsNotFound(err) {
-			log.ErrorContext(ctx, "Failed to get ExposedSecret", "error", err)
-			return ctrl.Result{}, err
-		}
-
-		if errors.IsNotFound(err) {
-			newES := newExposedSecret(r, &cfgMap, key, value)
-			if err := r.Create(ctx, newES); err != nil {
-				log.ErrorContext(ctx, "Failed to create ExposedSecret", "error", err)
-				return ctrl.Result{}, err
-			}
-			log.InfoContext(ctx, "Created ExposedSecret")
+	for _, key := range keys {
+		if slices.Contains(policy.Spec.ExcludedKeys, key) {
+			log.DebugContext(ctx, "Key is excluded from scanning", "key", key)
 			continue
 		}
 
-		log = log.With("Action", existing.Spec.Action)
-		switch existing.Spec.Action {
-		case v1alpha1.ReportOnly:
-			log.DebugContext(ctx, "Updating ExposedSecret status")
-			r.handleReportOnly(ctx, &existing, &cfgMap, key, value)
-		case v1alpha1.AutoRemediate:
-			log.DebugContext(ctx, "Creating Secret and updating ExposedSecret status")
-			r.handleAutoRemediate(ctx, &existing, &cfgMap, key, value)
-		case v1alpha1.Ignore:
-			log.DebugContext(ctx, "Ignoring ExposedSecret")
-			r.handleIgnore(ctx, &existing)
-		default:
-			log.ErrorContext(ctx, "Unknown action in ExposedSecret")
-			return ctrl.Result{}, fmt.Errorf("unknown action %q in ExposedSecret", existing.Spec.Action)
+		detectedValue := cfgMap.Data[key]
+		detectedSeverity := scanner.DetectSeverity(detectedValue)
+
+		esb := v1alpha1.NewExposedSecretBuilder(&cfgMap, key).
+			WithPolicy(policy).
+			WithSeverity(detectedSeverity)
+
+		// Determine the effective action.
+		existingAction := esb.Spec.Action
+		var effectiveAction v1alpha1.Action
+		if ruleset.IsBelowSeverity(detectedSeverity) {
+			log.InfoContext(ctx, "Secret severity below threshold, ignoring", "key", key, "severity", detectedSeverity)
+			effectiveAction = v1alpha1.ActionIgnore
+			esb = esb.WithMessage(fmt.Sprintf("Secret severity %s is below policy threshold %s", detectedSeverity, policy.Spec.MinSeverity))
+		} else {
+			effectiveAction = ruleset.EffectiveAction(existingAction)
 		}
+
+		// Process the secret key using the effective action.
+		err = r.handleExposedSecret(ctx, policy, &cfgMap, key, esb, effectiveAction)
+		if err != nil {
+			log.ErrorContext(ctx, "Failed to process ExposedSecret", "error", err)
+			return ctrl.Result{}, err
+		}
+		log.InfoContext(ctx, "Processed ExposedSecret", "key", key, "ConfigMap", cfgMap.Name)
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// prepareStatus sets common status fields.
-func (r *ConfigMapReconciler) prepareStatus(es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
-	es.Status.ConfigMapReference.Name = cfgMap.Name
-	es.Status.Key = key
-	es.Status.DetectedValue = r.config.HashingAlgorithm.Hash(value)
-	es.Status.Scanner = r.scanner.Name()
-	es.Status.LastUpdateTime = metav1.Now()
-	es.Status.ObservedGeneration = cfgMap.GetGeneration()
+func (r *ConfigMapReconciler) loadScanPolicy(ctx context.Context, namespace string) (*v1alpha1.ScanPolicy, error) {
+	log := logr.FromContextAsSlogLogger(ctx)
+
+	var scanPolicies v1alpha1.ScanPolicyList
+	if err := r.List(ctx, &scanPolicies, client.InNamespace(namespace)); err != nil {
+		log.ErrorContext(ctx, "Failed to list ScanPolicies", "error", err)
+		return nil, err
+	}
+
+	if len(scanPolicies.Items) == 0 {
+		log.DebugContext(ctx, "No ScanPolicies found, using default values")
+		return &v1alpha1.ScanPolicy{
+			Spec: v1alpha1.ScanPolicySpec{
+				Action:        v1alpha1.ActionReportOnly,
+				MinSeverity:   v1alpha1.SeverityMedium,
+				Scanner:       v1alpha1.ScannerGitleaks,
+				HashAlgorithm: v1alpha1.SHA256,
+			},
+		}, nil
+	}
+
+	if len(scanPolicies.Items) > 1 {
+		log.WarnContext(ctx, "Multiple ScanPolicies found, using the first one", "ScanPolicy", scanPolicies.Items[0].Name)
+	}
+	return &scanPolicies.Items[0], nil
+}
+
+func (r *ConfigMapReconciler) getSecretKeys(scanner scanners.Scanner, cfgMap *corev1.ConfigMap) ([]string, bool) {
+	var keys []string
+	for key, value := range cfgMap.Data {
+		if scanner.IsSecret(value) {
+			keys = append(keys, key)
+		}
+	}
+	return keys, len(keys) > 0
+}
+
+func (r *ConfigMapReconciler) handleExposedSecret(
+	ctx context.Context,
+	policy *v1alpha1.ScanPolicy,
+	cfgMap *corev1.ConfigMap,
+	key string,
+	esb *v1alpha1.ExposedSecretBuilder,
+	effectiveAction v1alpha1.Action,
+) error {
+	exposedSecretName := v1alpha1.NewExposedSecretName(cfgMap, key)
+	log := logr.FromContextAsSlogLogger(ctx).With("ExposedSecret", exposedSecretName)
+
+	// Try to get an existing ExposedSecret.
+	var existing v1alpha1.ExposedSecret
+	err := r.Get(ctx, client.ObjectKey{Namespace: cfgMap.Namespace, Name: exposedSecretName}, &existing)
+	if err != nil && !errors.IsNotFound(err) {
+		log.ErrorContext(ctx, "Failed to get ExposedSecret", "error", err)
+		return fmt.Errorf("failed to get ExposedSecret: %w", err)
+	}
+
+	// If not found, create a new ExposedSecret.
+	if errors.IsNotFound(err) {
+		if err := r.Create(ctx, esb.Build()); err != nil {
+			log.ErrorContext(ctx, "Failed to create ExposedSecret", "error", err)
+			return fmt.Errorf("failed to create ExposedSecret: %w", err)
+		}
+		log.InfoContext(ctx, "Created ExposedSecret", "name", esb.Name)
+		return nil
+	}
+
+	// For an existing object, update the policy and status.
+	// (You could decide whether to update only if the severity is below threshold.)
+	switch effectiveAction {
+	case v1alpha1.ActionReportOnly:
+		return r.handleReportOnly(ctx, esb)
+	case v1alpha1.ActionAutoRemediate:
+		return r.handleAutoRemediate(ctx, policy, esb, cfgMap, key)
+	case v1alpha1.ActionIgnore:
+		return r.handleIgnore(ctx, policy, esb)
+	default:
+		log.ErrorContext(ctx, "Unknown effective action", "action", effectiveAction)
+		return fmt.Errorf("unknown action %q in ExposedSecret", effectiveAction)
+	}
 }
 
 // handleReportOnly updates the status for ReportOnly action.
-func (r *ConfigMapReconciler) handleReportOnly(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
+func (r *ConfigMapReconciler) handleReportOnly(ctx context.Context, esb *v1alpha1.ExposedSecretBuilder) error {
 	log := logr.FromContextAsSlogLogger(ctx)
-	r.prepareStatus(es, cfgMap, key, value)
-	es.Status.Message = fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfgMap.Name, key)
-	es.Status.Phase = v1alpha1.PhaseDetected
-	es.Status.CreatedSecretRef = nil
-
-	if err := r.Status().Update(ctx, es); err != nil {
-		log.ErrorContext(ctx, "Failed to update ExposedSecret status for ReportOnly", "error", err, "ExposedSecret", es.Name)
-		return
+	if err := r.Status().Update(ctx, esb.Build()); err != nil {
+		log.ErrorContext(ctx, "Failed to update ExposedSecret status for ReportOnly", "error", err, "ExposedSecret", esb.Name)
+		return err
 	}
-	log.InfoContext(ctx, "Updated ExposedSecret status for ReportOnly", "ExposedSecret", es.Name)
+	log.InfoContext(ctx, "Updated ExposedSecret status for ReportOnly", "ExposedSecret", esb.Name)
+	return nil
 }
 
 // handleAutoRemediate creates a Secret and updates the status for AutoRemediate action.
-func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, es *v1alpha1.ExposedSecret, cfgMap *corev1.ConfigMap, key, value string) {
+func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, policy *v1alpha1.ScanPolicy, esb *v1alpha1.ExposedSecretBuilder, cfgMap *corev1.ConfigMap, key string) error {
 	log := logr.FromContextAsSlogLogger(ctx)
-	r.prepareStatus(es, cfgMap, key, value)
-	es.Status.Message = fmt.Sprintf("Secret auto-remediated from ConfigMap %q for key %q", cfgMap.Name, key)
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -144,77 +204,54 @@ func (r *ConfigMapReconciler) handleAutoRemediate(ctx context.Context, es *v1alp
 			Namespace: cfgMap.Namespace,
 		},
 		StringData: map[string]string{
-			key: value,
+			key: cfgMap.Data[key],
 		},
 	}
 	if err := r.Create(ctx, secret); err != nil {
 		log.ErrorContext(ctx, "Failed to create Secret for AutoRemediate", "error", err, "Secret", secret.Name)
-		return
+		return err
 	}
 	log.InfoContext(ctx, "Created Secret for AutoRemediate", "Secret", secret.Name)
-	es.Status.Phase = v1alpha1.PhaseRemediated
-	es.Status.CreatedSecretRef = &v1alpha1.SecretReference{Name: secret.Name}
 
-	if err := r.Status().Update(ctx, es); err != nil {
-		log.ErrorContext(ctx, "Failed to update ExposedSecret status for AutoRemediate", "error", err, "ExposedSecret", es.Name)
-		return
+	if policy.Spec.EnableConfigMapMutation {
+		remediated := cfgMap.DeepCopy()
+		delete(remediated.Data, key)
+		if remediated.Annotations == nil {
+			remediated.Annotations = map[string]string{}
+		}
+		remediated.Annotations[v1alpha1.AnnotationExposedSecret] = secret.Name
+		if err := r.Update(ctx, remediated); err != nil {
+			log.ErrorContext(ctx, "Failed to update ConfigMap after AutoRemediate", "error", err, "ConfigMap", cfgMap.Name)
+			return err
+		}
+		log.InfoContext(ctx, "Updated ConfigMap after AutoRemediate", "ConfigMap", cfgMap.Name)
 	}
-	log.InfoContext(ctx, "Updated ExposedSecret status for AutoRemediate", "ExposedSecret", es.Name)
+
+	esb = esb.WithRemediated(secret.Name)
+	if err := r.Status().Update(ctx, esb.Build()); err != nil {
+		log.ErrorContext(ctx, "Failed to update ExposedSecret status for AutoRemediate", "error", err, "ExposedSecret", esb.Name)
+		return err
+	}
+	log.InfoContext(ctx, "Updated ExposedSecret status for AutoRemediate", "ExposedSecret", esb.Name)
+	return nil
 }
 
 // handleIgnore updates the status for Ignore action.
-func (r *ConfigMapReconciler) handleIgnore(ctx context.Context, es *v1alpha1.ExposedSecret) {
+func (r *ConfigMapReconciler) handleIgnore(ctx context.Context, policy *v1alpha1.ScanPolicy, esb *v1alpha1.ExposedSecretBuilder) error {
 	log := logr.FromContextAsSlogLogger(ctx)
+	es := v1alpha1.BuilderForExposedSecret(esb.Build()).
+		WithPolicy(policy).
+		WithMessage("ExposedSecret ignored by user").
+		WithSeverity(esb.ExposedSecret.Spec.Severity).
+		Build()
 	es.Status.Phase = v1alpha1.PhaseIgnored
-	es.Status.Message = "ExposedSecret ignored by user"
-	es.Status.CreatedSecretRef = nil
 
 	if err := r.Status().Update(ctx, es); err != nil {
 		log.ErrorContext(ctx, "Failed to update ExposedSecret status for Ignore", "error", err, "ExposedSecret", es.Name)
-		return
+		return err
 	}
 	log.InfoContext(ctx, "Updated ExposedSecret status for Ignore", "ExposedSecret", es.Name)
-}
-
-// newExposedSecret creates a new ExposedSecret resource with common fields pre-filled.
-func newExposedSecret(r *ConfigMapReconciler, cfgMap *corev1.ConfigMap, key, value string) *v1alpha1.ExposedSecret {
-	es := &v1alpha1.ExposedSecret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1alpha1.NewExposedSecretName(cfgMap, key),
-			Namespace: cfgMap.Namespace,
-		},
-		Spec: v1alpha1.ExposedSecretSpec{
-			Action:   r.config.DefaultAction,
-			Severity: r.config.DefaultSeverity,
-			Notes:    "Automatically reported by secret-detection-operator",
-		},
-	}
-	// Initialize status fields.
-	es.Status.ConfigMapReference.Name = cfgMap.Name
-	es.Status.Key = key
-	es.Status.DetectedValue = r.config.HashingAlgorithm.Hash(value)
-	es.Status.Scanner = r.scanner.Name()
-	es.Status.Message = fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfgMap.Name, key)
-	es.Status.Phase = v1alpha1.PhaseDetected
-	es.Status.LastUpdateTime = metav1.Now()
-	es.Status.ObservedGeneration = cfgMap.GetGeneration()
-	return es
-}
-
-// extractSecrets scans the given ConfigMap for secret values and returns a map
-// of key/value pairs along with a flag indicating whether any secrets were found.
-func (r *ConfigMapReconciler) extractSecrets(ctx context.Context, cm *corev1.ConfigMap) (map[string]string, bool) {
-	log := logr.FromContextAsSlogLogger(ctx)
-	secretData := map[string]string{}
-	found := false
-	for key, value := range cm.Data {
-		if r.scanner.IsSecret(value) {
-			secretData[key] = value
-			found = true
-			log.InfoContext(ctx, "Detected secret value in ConfigMap", "ConfigMap", cm.Name, "key", key)
-		}
-	}
-	return secretData, found
+	return nil
 }
 
 // SetupWithManager registers this reconciler with the manager.

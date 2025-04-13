@@ -55,12 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	controller, err := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme(), cfg.ConfigMapReconciler)
-	if err != nil {
-		setupLog.Error(err, "Unable to create ConfigMapReconciler")
-		os.Exit(1)
-	}
-
+	controller := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme())
 	if err = controller.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "ConfigMap")
 		os.Exit(1)
