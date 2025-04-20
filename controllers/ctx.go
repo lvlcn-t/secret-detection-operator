@@ -36,9 +36,9 @@ type recCtx struct {
 }
 
 // newRecCtx creates a new [recCtx] for a given [v1alpha1.ScanPolicy] and [corev1.ConfigMap].
-func newRecCtx(client client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMap) *recCtx {
+func newRecCtx(c client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMap) *recCtx {
 	rc := &recCtx{
-		cl:        client,
+		cl:        c,
 		policy:    policy,
 		scanner:   scanners.Get(policy.Spec.Scanner),
 		configMap: cm,
