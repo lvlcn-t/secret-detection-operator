@@ -1,7 +1,12 @@
 package scanners
 
-import "github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+import (
+	"testing"
 
+	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+)
+
+//go:generate go tool moq -out scanner_moq.go . Scanner
 type Scanner interface {
 	// IsSecret checks if the given value is a secret.
 	// It returns true if the value is a secret, false otherwise.
@@ -21,7 +26,7 @@ type Scanner interface {
 var _ Scanner = (*Gitleaks)(nil)
 
 var scanners = map[v1alpha1.ScannerName]Scanner{
-	"gitleaks": NewGitleaksScanner(),
+	v1alpha1.ScannerGitleaks: NewGitleaksScanner(),
 }
 
 // Get returns the scanner for the given name.
@@ -31,4 +36,11 @@ func Get(name v1alpha1.ScannerName) Scanner {
 		return scanner
 	}
 	return nil
+}
+
+// Set sets the scanner for the given name.
+// It is used for testing purposes to inject a different scanner implementation.
+func Set(t *testing.T, name v1alpha1.ScannerName, scanner Scanner) {
+	t.Helper()
+	scanners[name] = scanner
 }

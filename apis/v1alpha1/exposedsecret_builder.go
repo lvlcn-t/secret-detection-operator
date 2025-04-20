@@ -70,8 +70,8 @@ func (b *ExposedSecretBuilder) WithMessage(message string) *ExposedSecretBuilder
 	return b
 }
 
-func (b *ExposedSecretBuilder) WithRemediated(secretName string) *ExposedSecretBuilder {
-	b.Status.CreatedSecretRef = &SecretReference{Name: secretName}
+func (b *ExposedSecretBuilder) WithRemediated(secret *corev1.Secret) *ExposedSecretBuilder {
+	b.Status.CreatedSecretRef = &SecretReference{Name: secret.Name}
 	b.Status.Phase = PhaseRemediated
 	return b
 }

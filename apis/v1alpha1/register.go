@@ -28,6 +28,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&ExposedSecret{},
 		&ExposedSecretList{},
+		&ScanPolicy{},
+		&ScanPolicyList{},
 	)
 	return nil
 }

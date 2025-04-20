@@ -13,7 +13,11 @@ type Gitleaks struct {
 }
 
 func NewGitleaksScanner() *Gitleaks {
-	c := config.ViperConfig{}
+	c := config.ViperConfig{
+		Extend: config.Extend{
+			UseDefault: true,
+		},
+	}
 	cfg, err := c.Translate()
 	if err != nil {
 		panic(fmt.Errorf("failed to translate gitleaks config: %v", err))
