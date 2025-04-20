@@ -10,7 +10,15 @@ import (
 
 type ExposedSecretBuilder struct {
 	*ExposedSecret
-	policy *ScanPolicy
+
+	// existingAction defines if the resource already existed, pin down its user‑chosen action
+	existingAction Action
+	// override is true if the user actually set that action (vs leaving it at the policy default)
+	override bool
+
+	policy      *ScanPolicy
+	severity    Severity
+	hashingFunc func(string) string
 }
 
 func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedSecretBuilder {
@@ -31,9 +39,7 @@ func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedS
 				Notes:    "Automatically reported by the secret-detection-operator",
 			},
 			Status: ExposedSecretStatus{
-				ConfigMapReference: ConfigMapReference{
-					Name: cfg.Name,
-				},
+				ConfigMapReference: ConfigMapReference{Name: cfg.Name},
 				Key:                exposedKey,
 				Scanner:            "",
 				DetectedValue:      cfg.Data[exposedKey],
@@ -43,25 +49,48 @@ func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedS
 				Message:            fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfg.Name, exposedKey),
 			},
 		},
+		hashingFunc: SHA256.Hash,
 	}
 }
 
-func BuilderForExposedSecret(es *ExposedSecret) *ExposedSecretBuilder {
-	return &ExposedSecretBuilder{
-		ExposedSecret: es,
-	}
+func (b *ExposedSecretBuilder) ExistingAction() Action {
+	return b.existingAction
 }
 
-func (b *ExposedSecretBuilder) WithPolicy(policy *ScanPolicy) *ExposedSecretBuilder {
-	b.Annotations[AnnotationAppliedPolicy] = policy.Name
-	b.Spec.Action = policy.Spec.Action
-	b.Status.Scanner = policy.Spec.Scanner.String()
-	b.policy = policy
+func (b *ExposedSecretBuilder) Override() bool {
+	return b.override
+}
+
+func (b *ExposedSecretBuilder) WithAction(act Action) *ExposedSecretBuilder {
+	b.Spec.Action = act
 	return b
 }
 
-func (b *ExposedSecretBuilder) WithSeverity(severity Severity) *ExposedSecretBuilder {
-	b.Spec.Severity = severity
+func (b *ExposedSecretBuilder) WithPhase(phase Phase) *ExposedSecretBuilder {
+	b.Status.Phase = phase
+	return b
+}
+
+func (b *ExposedSecretBuilder) WithPolicy(policy *ScanPolicy) *ExposedSecretBuilder {
+	b.policy = policy
+	b.Annotations[AnnotationAppliedPolicy] = policy.Name
+	b.Status.Scanner = policy.Spec.Scanner.String()
+	b.hashingFunc = policy.Spec.HashAlgorithm.Hash
+	return b
+}
+
+func (b *ExposedSecretBuilder) WithExisting(es *ExposedSecret) *ExposedSecretBuilder {
+	if es.Spec.Action != DefaultAction {
+		b.existingAction = es.Spec.Action
+		b.override = true
+	}
+	b.Spec.Notes = es.Spec.Notes
+	return b
+}
+
+func (b *ExposedSecretBuilder) WithSeverity(s Severity) *ExposedSecretBuilder {
+	b.severity = s
+	b.Spec.Severity = s
 	return b
 }
 
@@ -72,24 +101,14 @@ func (b *ExposedSecretBuilder) WithMessage(message string) *ExposedSecretBuilder
 
 func (b *ExposedSecretBuilder) WithRemediated(secret *corev1.Secret) *ExposedSecretBuilder {
 	b.Status.CreatedSecretRef = &SecretReference{Name: secret.Name}
+	b.Spec.Action = ActionAutoRemediate
 	b.Status.Phase = PhaseRemediated
 	return b
 }
 
-func (b *ExposedSecretBuilder) IsSeverityBelowThreshold() bool {
-	if b.policy == nil {
-		return false
-	}
-	// Only ignore if the detected severity is strictly lower than the minimum defined in policy.
-	return b.Spec.Severity.Int() < b.policy.Spec.MinSeverity.Int()
-}
-
 func (b *ExposedSecretBuilder) Build() *ExposedSecret {
 	b.Status.LastUpdateTime = metav1.Now()
-	if b.IsSeverityBelowThreshold() {
-		b.Status.Phase = PhaseIgnored
-		b.Status.Message = fmt.Sprintf("Secret ignored due to policy %q", b.policy.Name)
-	}
+	b.Status.DetectedValue = b.hashingFunc(b.Status.DetectedValue)
 	return b.ExposedSecret
 }
 

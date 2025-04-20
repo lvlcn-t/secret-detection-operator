@@ -26,30 +26,22 @@ type recCtx struct {
 	cl client.Client
 	// scanner is the secret scanner used to detect secrets in the [corev1.ConfigMap].
 	scanner scanners.Scanner
-	// ruleset is the policy ruleset derived from the [v1alpha1.ScanPolicy].
-	ruleset *ruleset
+	// policy is the policy policy derived from the [v1alpha1.ScanPolicy].
+	policy *v1alpha1.ScanPolicy
 	// configMap is the [corev1.ConfigMap] being reconciled.
 	configMap *corev1.ConfigMap
 
 	// log is the logger used for logging messages during reconciliation.
 	log *slog.Logger
-	// handlers is a map of actions to their corresponding handler functions.
-	handlers map[v1alpha1.Action]func(b *v1alpha1.ExposedSecretBuilder, key string) error
 }
 
 // newRecCtx creates a new [recCtx] for a given [v1alpha1.ScanPolicy] and [corev1.ConfigMap].
 func newRecCtx(client client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMap) *recCtx {
-	ruleset := newPolicyRuleset(policy)
 	rc := &recCtx{
 		cl:        client,
-		ruleset:   ruleset,
-		scanner:   ruleset.Scanner(),
+		policy:    policy,
+		scanner:   scanners.Get(policy.Spec.Scanner),
 		configMap: cm,
-	}
-	rc.handlers = map[v1alpha1.Action]func(b *v1alpha1.ExposedSecretBuilder, key string) error{
-		v1alpha1.ActionReportOnly:    rc.handleReportOnly,
-		v1alpha1.ActionAutoRemediate: rc.handleAutoRemediate,
-		v1alpha1.ActionIgnore:        rc.handleIgnore,
 	}
 	return rc
 }
@@ -67,7 +59,7 @@ func (rc *recCtx) run(ctx context.Context) (ctrl.Result, error) {
 	}
 
 	for _, key := range keys {
-		if slices.Contains(rc.ruleset.policy.Spec.ExcludedKeys, key) {
+		if slices.Contains(rc.policy.Spec.ExcludedKeys, key) {
 			rc.log.DebugContext(ctx, "Key excluded from scanning", "key", key)
 			continue
 		}
@@ -87,76 +79,77 @@ func (rc *recCtx) process(key string) error {
 	value := rc.configMap.Data[key]
 	sev := rc.scanner.DetectSeverity(value)
 
+	existing := v1alpha1.ExposedSecret{Spec: v1alpha1.ExposedSecretSpec{Action: v1alpha1.DefaultAction}}
+	err := rc.cl.Get(rc.ctx, client.ObjectKey{Namespace: rc.configMap.Namespace, Name: key}, &existing)
+	if err != nil && !errors.IsNotFound(err) {
+		rc.log.ErrorContext(rc.ctx, "Failed to get ExposedSecret", "error", err)
+		return fmt.Errorf("failed to get ExposedSecret: %w", err)
+	}
+
 	builder := v1alpha1.NewExposedSecretBuilder(rc.configMap, key).
-		WithPolicy(rc.ruleset.policy).
+		WithPolicy(rc.policy).
+		WithExisting(&existing).
 		WithSeverity(sev)
 
-	action := rc.resolveAction(builder, sev)
-	handler := rc.handlers[action]
-	return handler(builder, key)
-}
+	res := rc.computeResolvedAction(builder, sev)
+	rc.log.DebugContext(rc.ctx, "Resolved action",
+		"action", res.Action, "severity", res.FinalSeverity,
+		"phase", res.FinalPhase, "message", res.Message)
 
-// handleReportOnly updates the status of the ExposedSecret to reflect a report-only action.
-func (rc *recCtx) handleReportOnly(b *v1alpha1.ExposedSecretBuilder, _ string) error {
-	log := rc.log.With("ExposedSecret", b.Name, "action", b.Spec.Action)
-	es := b.Build()
-	if err := createOrUpdate(rc.ctx, rc.cl, es); err != nil {
-		log.ErrorContext(rc.ctx, "Failed to create or update ExposedSecret", "error", err)
+	builder = builder.
+		WithAction(res.Action).
+		WithMessage(res.Message).
+		WithPhase(res.FinalPhase).
+		WithSeverity(res.FinalSeverity)
+
+	if res.Action == v1alpha1.ActionAutoRemediate {
+		secret, rErr := rc.doRemediation(builder, key)
+		if rErr != nil {
+			rc.log.ErrorContext(rc.ctx, "Failed to do remediation", "error", rErr)
+			return fmt.Errorf("failed to do remediation: %w", rErr)
+		}
+		builder = builder.WithRemediated(secret)
+	}
+
+	es := builder.Build()
+	if err = rc.createOrUpdate(es); err != nil {
+		rc.log.ErrorContext(rc.ctx, "Failed to create or update ExposedSecret", "error", err)
 		return fmt.Errorf("failed to create or update ExposedSecret: %w", err)
 	}
-	log.DebugContext(rc.ctx, "Created or updated ExposedSecret")
+	rc.log.DebugContext(rc.ctx, "Created or updated ExposedSecret")
 	return nil
 }
 
-// handleAutoRemediate creates a Kubernetes Secret for the exposed value, optionally
-// mutates the ConfigMap to remove the secret, and updates the ExposedSecret status.
-func (rc *recCtx) handleAutoRemediate(b *v1alpha1.ExposedSecretBuilder, key string) error {
-	log := rc.log.With("ExposedSecret", b.Name, "action", b.Spec.Action, "Secret", b.Name)
-
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      b.Name,
-			Namespace: rc.configMap.Namespace,
-		},
-		StringData: map[string]string{
-			key: rc.configMap.Data[key],
-		},
+func (rc *recCtx) computeResolvedAction(b *v1alpha1.ExposedSecretBuilder, sev v1alpha1.Severity) ResolvedAction {
+	res := ActionResolver{
+		OverrideAction: b.ExistingAction(),
+		HasOverride:    b.Override(),
+		DefaultPolicy:  rc.policy.Spec.Action,
+		Severity:       sev,
+		MinSeverity:    rc.policy.Spec.MinSeverity,
 	}
-	if err := createOrUpdate(rc.ctx, rc.cl, secret); err != nil {
-		log.ErrorContext(rc.ctx, "Failed to create or update Secret", "error", err)
-		return fmt.Errorf("failed to create or update Secret: %w", err)
+	return res.Resolve()
+}
+
+func (rc *recCtx) doRemediation(b *v1alpha1.ExposedSecretBuilder, key string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: rc.configMap.Namespace},
+		StringData: map[string]string{key: rc.configMap.Data[key]},
+	}
+	if err := rc.createOrUpdate(secret); err != nil {
+		rc.log.ErrorContext(rc.ctx, "Failed to create or update Secret", "error", err)
+		return nil, fmt.Errorf("failed to create or update Secret: %w", err)
 	}
 	rc.log.InfoContext(rc.ctx, "Secret created")
 
-	if rc.ruleset.policy.Spec.EnableConfigMapMutation {
+	if rc.policy.Spec.EnableConfigMapMutation {
 		if err := rc.autoRemediateConfigMap(secret, key); err != nil {
 			rc.log.ErrorContext(rc.ctx, "Failed to update ConfigMap", "error", err)
-			return fmt.Errorf("failed to update ConfigMap: %w", err)
+			return nil, fmt.Errorf("failed to update ConfigMap: %w", err)
 		}
 		rc.log.InfoContext(rc.ctx, "Auto-remediated ConfigMap", "key", key)
 	}
-
-	es := b.WithRemediated(secret).Build()
-	if err := createOrUpdate(rc.ctx, rc.cl, es); err != nil {
-		log.ErrorContext(rc.ctx, "Failed to create or update ExposedSecret", "error", err)
-		return fmt.Errorf("failed to create or update ExposedSecret: %w", err)
-	}
-	log.DebugContext(rc.ctx, "Created or updated with remediation")
-	return nil
-}
-
-// handleIgnore updates the ExposedSecret status to mark the finding as ignored.
-func (rc *recCtx) handleIgnore(b *v1alpha1.ExposedSecretBuilder, _ string) error {
-	log := rc.log.With("ExposedSecret", b.Name, "action", b.Spec.Action)
-	es := b.WithMessage("ExposedSecret ignored by policy").Build()
-	es.Status.Phase = v1alpha1.PhaseIgnored
-
-	if err := createOrUpdate(rc.ctx, rc.cl, es); err != nil {
-		log.ErrorContext(rc.ctx, "Failed to create or update ExposedSecret", "error", err)
-		return fmt.Errorf("failed to create or update ExposedSecret: %w", err)
-	}
-	log.DebugContext(rc.ctx, "Updated status with ignore message")
-	return nil
+	return secret, nil
 }
 
 // findSecretKeys returns all keys in the ConfigMap whose values match the scanner's secret pattern.
@@ -168,17 +161,6 @@ func (rc *recCtx) findSecretKeys() []string {
 		}
 	}
 	return keys
-}
-
-// resolveAction computes the effective action for a secret based on policy severity threshold
-// and any existing builder state, updating the builder message if severity is too low.
-func (rc *recCtx) resolveAction(b *v1alpha1.ExposedSecretBuilder, sev v1alpha1.Severity) v1alpha1.Action {
-	if rc.ruleset.IsBelowSeverity(sev) {
-		b.WithMessage(fmt.Sprintf("Secret severity %q below policy threshold %q", sev, rc.ruleset.policy.Spec.MinSeverity))
-		return v1alpha1.ActionIgnore
-	}
-
-	return rc.ruleset.EffectiveAction(b.Spec.Action)
 }
 
 // autoRemediateConfigMap removes the secret key from the ConfigMap, annotates it,
@@ -198,7 +180,7 @@ func (rc *recCtx) autoRemediateConfigMap(secret *corev1.Secret, key string) erro
 }
 
 // createOrUpdate creates or updates the given object in the cluster.
-func createOrUpdate(ctx context.Context, cl client.Client, obj client.Object) error {
+func (rc *recCtx) createOrUpdate(obj client.Object) error {
 	if obj == nil {
 		return stderrors.New("object is nil")
 	}
@@ -210,14 +192,14 @@ func createOrUpdate(ctx context.Context, cl client.Client, obj client.Object) er
 	}
 
 	existing := reflect.New(t).Interface().(client.Object)
-	if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), existing); err != nil {
+	if err := rc.cl.Get(rc.ctx, client.ObjectKeyFromObject(obj), existing); err != nil {
 		if errors.IsNotFound(err) {
-			return cl.Create(ctx, obj)
+			return rc.cl.Create(rc.ctx, obj)
 		}
 		return err
 	}
 
 	// Preserve the resource version to ensure the update is applied correctly.
 	obj.SetResourceVersion(existing.GetResourceVersion())
-	return cl.Update(ctx, obj)
+	return rc.cl.Update(rc.ctx, obj)
 }

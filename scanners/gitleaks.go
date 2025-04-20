@@ -25,6 +25,11 @@ func NewGitleaksScanner() *Gitleaks {
 	return &Gitleaks{detector: detect.NewDetector(cfg)}
 }
 
+// Name returns the name of the scanner.
+func (g *Gitleaks) Name() v1alpha1.ScannerName {
+	return v1alpha1.ScannerGitleaks
+}
+
 func (g *Gitleaks) IsSecret(value string) bool {
 	return len(g.detector.DetectString(value)) > 0
 }

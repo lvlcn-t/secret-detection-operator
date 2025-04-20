@@ -1,13 +1,14 @@
 package scanners
 
 import (
-	"testing"
-
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/stretchr/testify/require"
 )
 
 //go:generate go tool moq -out scanner_moq.go . Scanner
 type Scanner interface {
+	// Name returns the name of the scanner.
+	Name() v1alpha1.ScannerName
 	// IsSecret checks if the given value is a secret.
 	// It returns true if the value is a secret, false otherwise.
 	IsSecret(value string) bool
@@ -40,7 +41,9 @@ func Get(name v1alpha1.ScannerName) Scanner {
 
 // Set sets the scanner for the given name.
 // It is used for testing purposes to inject a different scanner implementation.
-func Set(t *testing.T, name v1alpha1.ScannerName, scanner Scanner) {
-	t.Helper()
+func Set(t require.TestingT, name v1alpha1.ScannerName, scanner Scanner) {
+	if t, ok := t.(interface{ Helper() }); ok {
+		t.Helper()
+	}
 	scanners[name] = scanner
 }

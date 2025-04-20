@@ -24,6 +24,9 @@ var _ Scanner = &ScannerMock{}
 //			IsSecretFunc: func(value string) bool {
 //				panic("mock out the IsSecret method")
 //			},
+//			NameFunc: func() v1alpha1.ScannerName {
+//				panic("mock out the Name method")
+//			},
 //		}
 //
 //		// use mockedScanner in code that requires Scanner
@@ -37,6 +40,9 @@ type ScannerMock struct {
 	// IsSecretFunc mocks the IsSecret method.
 	IsSecretFunc func(value string) bool
 
+	// NameFunc mocks the Name method.
+	NameFunc func() v1alpha1.ScannerName
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// DetectSeverity holds details about calls to the DetectSeverity method.
@@ -49,9 +55,13 @@ type ScannerMock struct {
 			// Value is the value argument value.
 			Value string
 		}
+		// Name holds details about calls to the Name method.
+		Name []struct {
+		}
 	}
 	lockDetectSeverity sync.RWMutex
 	lockIsSecret       sync.RWMutex
+	lockName           sync.RWMutex
 }
 
 // DetectSeverity calls DetectSeverityFunc.
@@ -115,5 +125,32 @@ func (mock *ScannerMock) IsSecretCalls() []struct {
 	mock.lockIsSecret.RLock()
 	calls = mock.calls.IsSecret
 	mock.lockIsSecret.RUnlock()
+	return calls
+}
+
+// Name calls NameFunc.
+func (mock *ScannerMock) Name() v1alpha1.ScannerName {
+	if mock.NameFunc == nil {
+		panic("ScannerMock.NameFunc: method is nil but Scanner.Name was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockName.Lock()
+	mock.calls.Name = append(mock.calls.Name, callInfo)
+	mock.lockName.Unlock()
+	return mock.NameFunc()
+}
+
+// NameCalls gets all the calls that were made to Name.
+// Check the length with:
+//
+//	len(mockedScanner.NameCalls())
+func (mock *ScannerMock) NameCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockName.RLock()
+	calls = mock.calls.Name
+	mock.lockName.RUnlock()
 	return calls
 }
