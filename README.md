@@ -1,34 +1,41 @@
-# Secret Detection Operator<!-- omit from toc -->
+# 🔐 Secret Detection Operator<!-- omit from toc -->
 
-<!-- markdownlint-disable-next-line -->
 <p align="center">
-    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/secret-detection-operator?style=flat"></a> 
+    <a href="/../../commits/" title="Last Commit"><img alt="Last Commit" src="https://img.shields.io/github/last-commit/lvlcn-t/secret-detection-operator?style=flat"></a>
     <a href="/../../issues" title="Open Issues"><img alt="Open Issues" src="https://img.shields.io/github/issues/lvlcn-t/secret-detection-operator?style=flat"></a>
 </p>
 
-- [About this component](#about-this-component)
-- [Installation](#installation)
+- [📖 Overview](#-overview)
+- [🚀 Quick Installation](#-quick-installation)
   - [Kustomize](#kustomize)
   - [Helm](#helm)
-- [Usage](#usage)
-  - [Example](#example)
+- [🛠️ How it Works](#️-how-it-works)
+- [🛡️ Configuration with ScanPolicy](#️-configuration-with-scanpolicy)
+  - [Example ScanPolicy](#example-scanpolicy)
+- [📌 Example Usage](#-example-usage)
 - [Code of Conduct](#code-of-conduct)
 - [Working Language](#working-language)
 - [Support and Feedback](#support-and-feedback)
 - [How to Contribute](#how-to-contribute)
 - [Licensing](#licensing)
 
-## About this component
+---
 
-The **Secret Detection Operator** is a Kubernetes operator designed to detect secret values stored insecurely in ConfigMaps and optionally remediate them by migrating these secrets into dedicated Secret objects. Detected secrets are reported via a custom Kubernetes resource (`ExposedSecret`), which can be configured for reporting only, automatic remediation, or explicit ignoring.
+## 📖 Overview
 
-## Installation
+The **Secret Detection Operator** scans your Kubernetes ConfigMaps for sensitive data such as passwords or tokens. It can automatically remediate detected secrets by migrating them into secure Kubernetes Secret resources, or simply report them for manual action.
 
-You can deploy the Secret Detection Operator using one of the methods described below:
+It leverages customizable policies (`ScanPolicy`) to tailor secret handling across namespaces, ensuring sensitive data remains secure and compliant with your organization's standards.
+
+---
+
+## 🚀 Quick Installation
+
+You can deploy the operator quickly using either Kustomize or Helm.
 
 ### Kustomize
 
-To deploy the operator using Kustomize, you can use the following command:
+Apply the latest configuration directly:
 
 ```shell
 kubectl apply -k "github.com/lvlcn-t/secret-detection-operator/config/default?ref=main"
@@ -36,28 +43,77 @@ kubectl apply -k "github.com/lvlcn-t/secret-detection-operator/config/default?re
 
 ### Helm
 
-Deploy via Helm chart:
+Install via Helm chart:
 
 ```shell
-helm upgrade -i secret-detection-operator oci://ghcr.io/lvlcn-t/charts/secret-detection-operator \
-  --version 0.1.0 \
+VERSION="0.1.0"
+
+helm upgrade -i secret-detection-operator \
+  oci://ghcr.io/lvlcn-t/charts/secret-detection-operator \
+  --version $VERSION \
   --namespace secret-detection-system \
-  --create-namespace \
+  --create-namespace
 ```
 
-## Usage
+---
 
-The operator scans all ConfigMaps in your Kubernetes namespaces. If it detects secret-like values, it creates or updates an `ExposedSecret` custom resource.
+## 🛠️ How it Works
 
-By default, secrets are reported but not automatically remediated. You can adjust behavior via the `action` field in the `ExposedSecret` custom resource:
+The operator:
 
-- `ReportOnly` (default): Report the secret without remediation.
-- `AutoRemediate`: Automatically move the secret value into a dedicated Secret object.
-- `Ignore`: Explicitly ignore and do not act upon this detection.
+1. Scans ConfigMaps across your cluster for secret-like data.
+2. Reports findings via the `ExposedSecret` custom resource.
+3. Remediates detected secrets automatically based on your configuration, moving sensitive values to secure Kubernetes Secrets.
 
-### Example
+You can define specific behaviors for reporting and remediation through customizable policies (`ScanPolicy`).
 
-If the operator finds a secret-like value in a ConfigMap, it will create an `ExposedSecret` resource like this:
+---
+
+## 🛡️ Configuration with ScanPolicy
+
+`ScanPolicy` resources configure detection and remediation behaviors per namespace:
+
+- **Default Action:**
+  - `ReportOnly`: Logs detections without modifying ConfigMaps (default).
+  - `AutoRemediate`: Moves secrets to Kubernetes Secrets and optionally removes them from ConfigMaps.
+  - `Ignore`: Completely ignores detections.
+
+- **Severity Threshold:** Only secrets at or above this severity (`Low`, `Medium`, `High`, `Critical`) will trigger actions.
+
+- **Excluded Keys:** Ignore specific keys to avoid false positives.
+
+- **ConfigMap Mutation:** Optionally remove secret keys after migrating them.
+
+- **Scanner Engine:** Currently only `gitleaks` is supported, but more engines may be added in the future.
+
+- **Hash Algorithm:** Select how detected secrets are reported (`sha256`, `sha512`, or `none`).
+
+### Example ScanPolicy
+
+```yaml
+apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
+kind: ScanPolicy
+metadata:
+  name: default-policy
+  namespace: default
+spec:
+  action: AutoRemediate
+  minSeverity: Medium
+  excludedKeys:
+    - non-secret-token
+    - dummy-password
+  enableConfigMapMutation: true
+  scanner: gitleaks
+  hashAlgorithm: sha256
+```
+
+If no ScanPolicy is defined, defaults (`ReportOnly`, `Medium` severity, `gitleaks` scanner) apply.
+
+---
+
+## 📌 Example Usage
+
+When a secret-like value is detected in a ConfigMap, an `ExposedSecret` resource is created:
 
 ```yaml
 apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
@@ -81,9 +137,7 @@ status:
   ObservedGeneration: 1
 ```
 
-The resource can then be configured to either ignore the secret or remediate it by moving it into a dedicated Secret object.
-
-The remediated secret will have the same name as the `ExposedSecret` resource, and the `ExposedSecret` will be updated to reflect the new status:
+Upon remediation, the secret value is safely stored in a Kubernetes Secret and the ExposedSecret updated accordingly:
 
 ```yaml
 apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
@@ -101,6 +155,8 @@ status:
   Key: example-key
   Scanner: gitleaks
   DetectedValue: sha256:<hash>
+  SecretRef:
+    Name: example-config-map-example-key
   Phase: Remediated
   Message: Secret auto-remediated from ConfigMap 'example-config-map' for key 'example-key'
   LastUpdateTime: "2024-01-01T00:00:00Z"
