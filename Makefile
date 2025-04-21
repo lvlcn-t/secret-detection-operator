@@ -14,6 +14,7 @@ manifests: $(CONTROLLER_GEN) ## Generate CRD YAMLs
 		paths="./controllers" \
 		output:crd:dir=config/crd/bases \
 		output:rbac:dir=config/rbac
+	@cp config/crd/bases/*.yaml chart/crds/
 
 $(CONTROLLER_GEN):
 	GOBIN=$(shell pwd)/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest

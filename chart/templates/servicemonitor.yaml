@@ -1,0 +1,17 @@
+{{- if .Values.serviceMonitor.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "chart.fullname" . }}-servicemonitor
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  annotations:
+    description: Monitors the Secret Detection Operator's metrics endpoint.
+spec:
+  selector:
+    matchLabels:
+      {{- include "chart.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      interval: {{ .Values.serviceMonitor.interval | quote | default "30s" }}
+{{- end }}

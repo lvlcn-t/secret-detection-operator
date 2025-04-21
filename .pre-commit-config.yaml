@@ -23,7 +23,7 @@ repos:
         args: [--config, .golangci.yaml, --fix]
 
   - repo: https://github.com/norwoodj/helm-docs
-    rev: v1.13.1
+    rev: v1.14.2
     hooks:
       - id: helm-docs
         args:
@@ -32,6 +32,6 @@ repos:
   # If this is used for business, a free license is required.
   # It can be obtained from https://gitleaks.io/products.html
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.2
+    rev: v8.24.3
     hooks:
       - id: gitleaks

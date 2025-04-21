@@ -1,0 +1,15 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "chart.fullname" . }}-binding
+  labels:
+    {{- include "chart.labels" . | nindent 4 }}
+  annotations:
+    description: Binds a ClusterRole to the secret detection operator's service account.
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "chart.serviceAccountName" . }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "chart.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io

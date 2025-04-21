@@ -1,43 +1,62 @@
-# chart
+# secret-detection-operator
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.16.0](https://img.shields.io/badge/AppVersion-1.16.0-informational?style=flat-square)
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.1.0](https://img.shields.io/badge/AppVersion-v0.1.0-informational?style=flat-square)
 
-A Helm chart for Kubernetes
+A Helm chart to install the Secret Detection Operator.
+
+## Maintainers
+
+| Name | Email | Url |
+| ---- | ------ | --- |
+| lvlcn-t | <75443136+lvlcn-t@users.noreply.github.com> | <https://lvlcn-t.dev> |
+
+## Source Code
+
+* <https://github.com/lvlcn-t/secret-detection-operator>
 
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| affinity | object | `{}` |  |
-| autoscaling.enabled | bool | `false` |  |
-| autoscaling.maxReplicas | int | `100` |  |
-| autoscaling.minReplicas | int | `1` |  |
-| autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
-| fullnameOverride | string | `""` |  |
-| image.pullPolicy | string | `"IfNotPresent"` |  |
-| image.repository | string | `"nginx"` |  |
-| image.tag | string | `""` |  |
-| imagePullSecrets | list | `[]` |  |
-| ingress.annotations | object | `{}` |  |
-| ingress.className | string | `""` |  |
-| ingress.enabled | bool | `false` |  |
-| ingress.hosts[0].host | string | `"chart-example.local"` |  |
-| ingress.hosts[0].paths[0].path | string | `"/"` |  |
-| ingress.hosts[0].paths[0].pathType | string | `"ImplementationSpecific"` |  |
-| ingress.tls | list | `[]` |  |
-| nameOverride | string | `""` |  |
-| nodeSelector | object | `{}` |  |
-| podAnnotations | object | `{}` |  |
-| podSecurityContext | object | `{}` |  |
-| replicaCount | int | `1` |  |
-| resources | object | `{}` |  |
-| securityContext | object | `{}` |  |
-| service.port | int | `80` |  |
-| service.type | string | `"ClusterIP"` |  |
-| serviceAccount.annotations | object | `{}` |  |
-| serviceAccount.create | bool | `true` |  |
-| serviceAccount.name | string | `""` |  |
-| tolerations | list | `[]` |  |
+| affinity | object | `{}` | Affinity rules for pod scheduling |
+| fullnameOverride | string | `""` | Override the full name of the chart |
+| image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/lvlcn-t/secret-detection-operator","tag":""}` | Image configuration |
+| image.pullPolicy | string | `"IfNotPresent"` | Image pull policy |
+| image.repository | string | `"ghcr.io/lvlcn-t/secret-detection-operator"` | Image repository |
+| image.tag | string | `""` | Overrides the image tag whose default is the chart appVersion |
+| imagePullSecrets | list | `[]` | Image pull secrets for private registries |
+| livenessProbe | object | `{"enabled":true,"httpGet":{"path":"/healthz","port":8080},"initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":5}` | Liveness probe configuration |
+| livenessProbe.enabled | bool | `true` | Enable liveness probe |
+| livenessProbe.httpGet.path | string | `"/healthz"` | Path to access on the HTTP server |
+| livenessProbe.httpGet.port | int | `8080` | Port to access on the container |
+| livenessProbe.initialDelaySeconds | int | `30` | Delay before the first probe |
+| livenessProbe.periodSeconds | int | `10` | Probe interval |
+| livenessProbe.timeoutSeconds | int | `5` | Probe timeout |
+| nameOverride | string | `""` | Override the name of the chart |
+| nodeSelector | object | `{}` | Node selector for pod assignment |
+| podAnnotations | object | `{}` | Annotations to add to the Pod |
+| podSecurityContext | object | `{"fsGroup":65532,"supplementalGroups":[65532]}` | Pod security context |
+| podSecurityContext.fsGroup | int | `65532` | Group ID that the container runs as |
+| podSecurityContext.supplementalGroups | list | `[65532]` | Additional group IDs the container process is part of |
+| readinessProbe | object | `{"enabled":true,"httpGet":{"path":"/readyz","port":8080},"initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":5}` | Readiness probe configuration |
+| readinessProbe.enabled | bool | `true` | Enable readiness probe |
+| resources | object | `{"limits":{"cpu":"200m","memory":"256Mi"},"requests":{"cpu":"50m","memory":"64Mi"}}` | Resource requests and limits for the container |
+| resources.limits.cpu | string | `"200m"` | CPU limit |
+| resources.limits.memory | string | `"256Mi"` | Memory limit |
+| resources.requests.cpu | string | `"50m"` | CPU request |
+| resources.requests.memory | string | `"64Mi"` | Memory request |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsUser":65532}` | Security context for the container |
+| securityContext.allowPrivilegeEscalation | bool | `false` | Controls whether a process can gain more privileges than its parent process |
+| securityContext.capabilities | object | `{"drop":["ALL"]}` | Linux capabilities to drop |
+| securityContext.privileged | bool | `false` | Run in privileged mode |
+| securityContext.readOnlyRootFilesystem | bool | `true` | Mount root filesystem as read-only |
+| securityContext.runAsGroup | int | `65532` | Group ID to run the container |
+| securityContext.runAsUser | int | `65532` | User ID to run the container |
+| serviceAccount.name | string | `""` | If not set, a name is generated using the fullname template |
+| serviceMonitor | object | `{"enabled":true,"interval":"30s"}` | ServiceMonitor configuration for Prometheus Operator |
+| serviceMonitor.enabled | bool | `true` | Enable ServiceMonitor |
+| serviceMonitor.interval | string | `"30s"` | ServiceMonitor scrape interval |
+| tolerations | list | `[]` | Tolerations for pod assignment |
 
 ----------------------------------------------
-Autogenerated from chart metadata using [helm-docs v1.13.1](https://github.com/norwoodj/helm-docs/releases/v1.13.1)
+Autogenerated from chart metadata using [helm-docs v1.14.2](https://github.com/norwoodj/helm-docs/releases/v1.14.2)

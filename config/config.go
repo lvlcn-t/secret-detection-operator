@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/lvlcn-t/go-kit/config"
@@ -18,7 +19,8 @@ func (c *Config) IsEmpty() bool {
 
 func (c *Config) WithDefaults() *Config {
 	if c == nil {
-		return (&Config{}).WithDefaults()
+		cfg := &Config{}
+		return cfg.WithDefaults()
 	}
 	if c.MetricsAddr == "" {
 		c.MetricsAddr = ":9090"
@@ -34,7 +36,11 @@ func Load(path string) (*Config, error) {
 	config.SetName("secret-detection-operator")
 	cfg, err := config.Load[*Config](path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
-	return cfg.WithDefaults(), nil
+	cfg = cfg.WithDefaults()
+	if err = config.Validate(cfg); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+	return cfg, nil
 }

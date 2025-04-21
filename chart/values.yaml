@@ -1,82 +1,104 @@
-# Default values for chart.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
-replicaCount: 1
-
+# -- Image configuration
 image:
-  repository: nginx
+  # -- Image repository
+  repository: ghcr.io/lvlcn-t/secret-detection-operator
+  # -- Image pull policy
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Overrides the image tag whose default is the chart appVersion
   tag: ""
 
+# -- Image pull secrets for private registries
 imagePullSecrets: []
+
+# -- Override the name of the chart
 nameOverride: ""
+
+# -- Override the full name of the chart
 fullnameOverride: ""
 
 serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
+  # -- The name of the ServiceAccount to use.
+  # -- If not set, a name is generated using the fullname template
   name: ""
 
+# -- Annotations to add to the Pod
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+# -- Pod security context
+podSecurityContext:
+  # -- Group ID that the container runs as
+  fsGroup: 65532
+  # -- Additional group IDs the container process is part of
+  supplementalGroups: [65532]
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+# -- Security context for the container
+securityContext:
+  # -- Controls whether a process can gain more privileges than its parent process
+  allowPrivilegeEscalation: false
+  # -- Linux capabilities to drop
+  capabilities:
+    drop: ["ALL"]
+  # -- Run in privileged mode
+  privileged: false
+  # -- Mount root filesystem as read-only
+  readOnlyRootFilesystem: true
+  # -- User ID to run the container
+  runAsUser: 65532
+  # -- Group ID to run the container
+  runAsGroup: 65532
 
-service:
-  type: ClusterIP
-  port: 80
+# -- Resource requests and limits for the container
+resources:
+  limits:
+    # -- CPU limit
+    cpu: 200m
+    # -- Memory limit
+    memory: 256Mi
+  requests:
+    # -- CPU request
+    cpu: 50m
+    # -- Memory request
+    memory: 64Mi
 
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+# -- Liveness probe configuration
+livenessProbe:
+  # -- Enable liveness probe
+  enabled: true
+  httpGet:
+    # -- Path to access on the HTTP server
+    path: /healthz
+    # -- Port to access on the container
+    port: 8080
+  # -- Delay before the first probe
+  initialDelaySeconds: 30
+  # -- Probe timeout
+  timeoutSeconds: 5
+  # -- Probe interval
+  periodSeconds: 10
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+# -- Readiness probe configuration
+readinessProbe:
+  # -- Enable readiness probe
+  enabled: true
+  httpGet:
+    path: /readyz
+    port: 8080
+  initialDelaySeconds: 30
+  timeoutSeconds: 5
+  periodSeconds: 10
 
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
+# -- ServiceMonitor configuration for Prometheus Operator
+serviceMonitor:
+  # -- Enable ServiceMonitor
+  enabled: true
+  # -- ServiceMonitor scrape interval
+  interval: 30s
 
+# -- Node selector for pod assignment
 nodeSelector: {}
 
+# -- Tolerations for pod assignment
 tolerations: []
 
+# -- Affinity rules for pod scheduling
 affinity: {}
