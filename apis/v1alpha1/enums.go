@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/base64"
 	"encoding/hex"
 )
 
@@ -104,8 +105,6 @@ func (s ScannerName) String() string {
 const (
 	// ScannerGitleaks is the name of the ScannerGitleaks scanner.
 	ScannerGitleaks ScannerName = "Gitleaks"
-	// Trufflehog is the name of the Trufflehog scanner.
-	Trufflehog ScannerName = "Trufflehog"
 )
 
 // HashAlgorithm represents the hashing algorithm
@@ -118,22 +117,26 @@ func (ha HashAlgorithm) String() string {
 }
 
 const (
-	// SHA256 is the SHA-256 hashing algorithm.
-	SHA256 HashAlgorithm = "sha256"
-	// SHA512 is the SHA-512 hashing algorithm.
-	SHA512 HashAlgorithm = "sha512"
+	// AlgorithmSHA256 is the SHA-256 hashing algorithm.
+	AlgorithmSHA256 HashAlgorithm = "sha256"
+	// AlgorithmSHA512 is the SHA-512 hashing algorithm.
+	AlgorithmSHA512 HashAlgorithm = "sha512"
+	// AlgorithmNone is the no hashing algorithm.
+	AlgorithmNone HashAlgorithm = "none"
 )
 
 // Hash hashes the given secret value using the hashing algorithm.
 // It returns the hashed value as a string prefixed with the algorithm name.
 func (ha HashAlgorithm) Hash(secret string) string {
 	switch ha {
-	case SHA256:
+	case AlgorithmSHA256:
 		hash := sha256.Sum256([]byte(secret))
 		return "sha256:" + hex.EncodeToString(hash[:])
-	case SHA512:
+	case AlgorithmSHA512:
 		hash := sha512.Sum512([]byte(secret))
 		return "sha512:" + hex.EncodeToString(hash[:])
+	case AlgorithmNone:
+		return base64.StdEncoding.EncodeToString([]byte(secret))
 	default:
 		return "<unsupported>"
 	}

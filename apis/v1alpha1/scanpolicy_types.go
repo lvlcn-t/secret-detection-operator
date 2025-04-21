@@ -27,7 +27,7 @@ type ScanPolicySpec struct {
 	EnableConfigMapMutation bool `json:"enableConfigMapMutation,omitempty"`
 
 	// Scanner defines which detection engine to use for identifying secrets.
-	// +kubebuilder:validation:Enum=gitleaks;trufflehog
+	// +kubebuilder:validation:Enum=gitleaks
 	// +kubebuilder:default=gitleaks
 	Scanner ScannerName `json:"scanner,omitempty"`
 

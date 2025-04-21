@@ -16,9 +16,9 @@ type ExposedSecretBuilder struct {
 	// override is true if the user actually set that action (vs leaving it at the policy default)
 	override bool
 
-	policy      *ScanPolicy
-	severity    Severity
-	hashingFunc func(string) string
+	policy   *ScanPolicy
+	severity Severity
+	hashAlgo HashAlgorithm
 }
 
 func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedSecretBuilder {
@@ -49,7 +49,7 @@ func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedS
 				Message:            fmt.Sprintf("Secret detected in ConfigMap %q for key %q", cfg.Name, exposedKey),
 			},
 		},
-		hashingFunc: SHA256.Hash,
+		hashAlgo: AlgorithmSHA256,
 	}
 }
 
@@ -75,7 +75,7 @@ func (b *ExposedSecretBuilder) WithPolicy(policy *ScanPolicy) *ExposedSecretBuil
 	b.policy = policy
 	b.Annotations[AnnotationAppliedPolicy] = policy.Name
 	b.Status.Scanner = policy.Spec.Scanner.String()
-	b.hashingFunc = policy.Spec.HashAlgorithm.Hash
+	b.hashAlgo = policy.Spec.HashAlgorithm
 	return b
 }
 
@@ -108,7 +108,7 @@ func (b *ExposedSecretBuilder) WithRemediated(secret *corev1.Secret) *ExposedSec
 
 func (b *ExposedSecretBuilder) Build() *ExposedSecret {
 	b.Status.LastUpdateTime = metav1.Now()
-	b.Status.DetectedValue = b.hashingFunc(b.Status.DetectedValue)
+	b.Status.DetectedValue = b.hashAlgo.Hash(b.Status.DetectedValue)
 	return b.ExposedSecret
 }
 

@@ -73,7 +73,7 @@ func TestReconcile(t *testing.T) {
 					Action:        v1alpha1.ActionIgnore,
 					MinSeverity:   test.DefaultScanner.DetectSeverity(secretValue),
 					Scanner:       test.DefaultScanner.Name(),
-					HashAlgorithm: v1alpha1.SHA256,
+					HashAlgorithm: v1alpha1.AlgorithmSHA256,
 					ExcludedKeys:  []string{"password"},
 				},
 			},
@@ -95,7 +95,7 @@ func TestReconcile(t *testing.T) {
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm2"},
 					Key:                "password",
 					Scanner:            test.DefaultScanner.Name().String(),
-					DetectedValue:      v1alpha1.SHA256.Hash(secretValue),
+					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseDetected,
 				},
 			},
@@ -112,7 +112,7 @@ func TestReconcile(t *testing.T) {
 					Action:        v1alpha1.ActionIgnore,
 					MinSeverity:   test.DefaultScanner.DetectSeverity(secretValue),
 					Scanner:       test.DefaultScanner.Name(),
-					HashAlgorithm: v1alpha1.SHA256,
+					HashAlgorithm: v1alpha1.AlgorithmSHA256,
 				},
 			},
 			want: &v1alpha1.ExposedSecret{
@@ -125,7 +125,7 @@ func TestReconcile(t *testing.T) {
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm3"},
 					Key:                "password",
 					Scanner:            test.DefaultScanner.Name().String(),
-					DetectedValue:      v1alpha1.SHA256.Hash(secretValue),
+					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
 			},
@@ -142,7 +142,7 @@ func TestReconcile(t *testing.T) {
 					Action:        v1alpha1.ActionReportOnly,
 					MinSeverity:   v1alpha1.SeverityCritical,
 					Scanner:       test.DefaultScanner.Name(),
-					HashAlgorithm: v1alpha1.SHA256,
+					HashAlgorithm: v1alpha1.AlgorithmSHA256,
 				},
 			},
 			want: &v1alpha1.ExposedSecret{
@@ -155,7 +155,7 @@ func TestReconcile(t *testing.T) {
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm4"},
 					Key:                "password",
 					Scanner:            test.DefaultScanner.Name().String(),
-					DetectedValue:      v1alpha1.SHA256.Hash(secretValue),
+					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
 			},
@@ -197,7 +197,7 @@ func TestReconcile_AutoRemediate(t *testing.T) {
 			Action:        v1alpha1.ActionAutoRemediate,
 			MinSeverity:   v1alpha1.SeverityLow,
 			Scanner:       v1alpha1.ScannerGitleaks,
-			HashAlgorithm: v1alpha1.SHA256,
+			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
 	}
 	secret := &corev1.Secret{
@@ -214,7 +214,7 @@ func TestReconcile_AutoRemediate(t *testing.T) {
 			ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm"},
 			Key:                "k",
 			Scanner:            test.DefaultScanner.Name().String(),
-			DetectedValue:      v1alpha1.SHA256.Hash(secretValue),
+			DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 			Phase:              v1alpha1.PhaseRemediated,
 			CreatedSecretRef:   &v1alpha1.SecretReference{Name: "cm-k"},
 		},
@@ -256,7 +256,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 			Action:        v1alpha1.ActionIgnore,
 			MinSeverity:   test.DefaultScanner.DetectSeverity(secretValue),
 			Scanner:       test.DefaultScanner.Name(),
-			HashAlgorithm: v1alpha1.SHA256,
+			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
 	}
 	// Second policy would auto‑remediate if it were chosen
@@ -266,7 +266,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 			Action:        v1alpha1.ActionAutoRemediate,
 			MinSeverity:   v1alpha1.SeverityLow,
 			Scanner:       test.DefaultScanner.Name(),
-			HashAlgorithm: v1alpha1.SHA256,
+			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
 	}
 
@@ -297,7 +297,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm"},
 					Key:                "k",
 					Scanner:            test.DefaultScanner.Name().String(),
-					DetectedValue:      v1alpha1.SHA256.Hash(secretValue),
+					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
 			}, list.Items[0])
@@ -352,7 +352,7 @@ func TestReconcile_AutoRemediate_WithConfigMapMutation(t *testing.T) {
 			Action:                  v1alpha1.ActionAutoRemediate,
 			MinSeverity:             v1alpha1.SeverityLow,
 			Scanner:                 test.DefaultScanner.Name(),
-			HashAlgorithm:           v1alpha1.SHA256,
+			HashAlgorithm:           v1alpha1.AlgorithmSHA256,
 			EnableConfigMapMutation: true,
 		},
 	}
@@ -401,7 +401,7 @@ func TestReconcile_AutoRemediate_MultipleKeys(t *testing.T) {
 			Action:        v1alpha1.ActionAutoRemediate,
 			MinSeverity:   v1alpha1.SeverityLow,
 			Scanner:       test.DefaultScanner.Name(),
-			HashAlgorithm: v1alpha1.SHA256,
+			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
 	}
 

@@ -60,7 +60,7 @@ var DefaultScanPolicy = &v1alpha1.ScanPolicy{
 		Action:        v1alpha1.ActionReportOnly,
 		MinSeverity:   v1alpha1.SeverityMedium,
 		Scanner:       v1alpha1.ScannerGitleaks,
-		HashAlgorithm: v1alpha1.SHA256,
+		HashAlgorithm: v1alpha1.AlgorithmSHA256,
 	},
 }
 
