@@ -11,32 +11,32 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-type T interface {
+type TestingT interface {
 	require.TestingT
 	Helper()
 	Context() context.Context
 }
 
-type Framework[Type T] struct {
-	t Type
+type Framework[T TestingT] struct {
+	t T
 }
 
-func NewFramework[Type T](t Type) *Framework[Type] {
-	return &Framework[Type]{
+func NewFramework[T TestingT](t T) *Framework[T] {
+	return &Framework[T]{
 		t: t,
 	}
 }
 
-func (f *Framework[Type]) Unit(t Type) *Unittest[Type] {
+func (f *Framework[T]) Unit(t T) *Unittest[T] {
 	f.t.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 
-	return &Unittest[Type]{
+	return &Unittest[T]{
 		T:          t,
 		client:     fake.NewClientBuilder().WithScheme(scheme),
 		scheme:     scheme,
-		assertions: []func(*Unittest[Type], ctrl.Result, error){},
+		assertions: []func(*Unittest[T], ctrl.Result, error){},
 	}
 }

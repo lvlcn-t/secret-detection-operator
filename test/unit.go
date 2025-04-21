@@ -25,18 +25,18 @@ var DefaultScanner = &scanners.ScannerMock{
 	DetectSeverityFunc: func(_ string) v1alpha1.Severity { return v1alpha1.SeverityHigh },
 }
 
-type Unittest[Type T] struct {
-	T          Type
+type Unittest[T TestingT] struct {
+	T          T
 	Client     client.Client
 	client     *fake.ClientBuilder
 	cfgMap     *corev1.ConfigMap
 	scheme     *runtime.Scheme
 	scanner    scanners.Scanner
 	wantErr    bool
-	assertions []func(*Unittest[Type], ctrl.Result, error)
+	assertions []func(*Unittest[T], ctrl.Result, error)
 }
 
-func (t *Unittest[Type]) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest[Type] {
+func (t *Unittest[T]) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest[T] {
 	t.T.Helper()
 	if policy == nil {
 		return t
@@ -45,7 +45,7 @@ func (t *Unittest[Type]) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest[T
 	return t
 }
 
-func (t *Unittest[Type]) WithConfigMap(cm *corev1.ConfigMap) *Unittest[Type] {
+func (t *Unittest[T]) WithConfigMap(cm *corev1.ConfigMap) *Unittest[T] {
 	t.T.Helper()
 	if cm == nil {
 		return t
@@ -55,31 +55,31 @@ func (t *Unittest[Type]) WithConfigMap(cm *corev1.ConfigMap) *Unittest[Type] {
 	return t
 }
 
-func (t *Unittest[Type]) WithInterceptor(interceptor interceptor.Funcs) *Unittest[Type] { //nolint:gocritic // performance is irrelevant when testing
+func (t *Unittest[T]) WithInterceptor(interceptor interceptor.Funcs) *Unittest[T] { //nolint:gocritic // performance is irrelevant when testing
 	t.T.Helper()
 	t.client = t.client.WithInterceptorFuncs(interceptor)
 	return t
 }
 
-func (t *Unittest[Type]) WithAssertion(assertion func(*Unittest[Type], ctrl.Result, error)) *Unittest[Type] {
+func (t *Unittest[T]) WithAssertion(assertion func(*Unittest[T], ctrl.Result, error)) *Unittest[T] {
 	t.T.Helper()
 	t.assertions = append(t.assertions, assertion)
 	return t
 }
 
-func (t *Unittest[Type]) WithScanner(scanner scanners.Scanner) *Unittest[Type] {
+func (t *Unittest[T]) WithScanner(scanner scanners.Scanner) *Unittest[T] {
 	t.T.Helper()
 	t.scanner = scanner
 	return t
 }
 
-func (t *Unittest[Type]) WantError(err bool) *Unittest[Type] {
+func (t *Unittest[T]) WantError(err bool) *Unittest[T] {
 	t.T.Helper()
 	t.wantErr = err
 	return t
 }
 
-func (t *Unittest[Type]) Run() {
+func (t *Unittest[T]) Run() {
 	t.T.Helper()
 	t.Client = t.client.Build()
 	r := controllers.NewConfigMapReconciler(t.Client, t.scheme)
