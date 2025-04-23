@@ -1,7 +1,7 @@
 package test
 
 import (
-	"context"
+	"testing"
 
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	"github.com/stretchr/testify/require"
@@ -11,32 +11,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-type TestingT interface {
-	require.TestingT
-	Helper()
-	Context() context.Context
+type Framework struct {
+	t testing.TB
 }
 
-type Framework[T TestingT] struct {
-	t T
-}
-
-func NewFramework[T TestingT](t T) *Framework[T] {
-	return &Framework[T]{
+func NewFramework[T testing.TB](t T) *Framework {
+	return &Framework{
 		t: t,
 	}
 }
 
-func (f *Framework[T]) Unit(t T) *Unittest[T] {
+func (f *Framework) Unit(t testing.TB) *Unittest {
 	f.t.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 
-	return &Unittest[T]{
+	return &Unittest{
 		T:          t,
-		client:     fake.NewClientBuilder().WithScheme(scheme),
+		builder:    fake.NewClientBuilder().WithScheme(scheme),
 		scheme:     scheme,
-		assertions: []func(*Unittest[T], ctrl.Result, error){},
+		assertions: []func(*Unittest, ctrl.Result, error){},
 	}
 }

@@ -38,7 +38,7 @@ func TestReconcile_ScanPolicyListError(t *testing.T) {
 			Data:       map[string]string{"k": secretValue},
 		}).
 		WantError(true).
-		WithAssertion(func(u *test.Unittest[*testing.T], r ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, r ctrl.Result, err error) {
 			require.Error(t, err)
 			require.Equal(t, ctrl.Result{}, r)
 		}).
@@ -169,7 +169,7 @@ func TestReconcile(t *testing.T) {
 				WithScanPolicy(tt.policy).
 				WithScanner(test.DefaultScanner).
 				WantError(false).
-				WithAssertion(func(u *test.Unittest[*testing.T], r ctrl.Result, err error) {
+				WithAssertion(func(u *test.Unittest, r ctrl.Result, err error) {
 					list := &v1alpha1.ExposedSecretList{}
 					require.NoError(t, u.Client.List(u.T.Context(), list))
 					if tt.want == nil {
@@ -225,13 +225,13 @@ func TestReconcile_AutoRemediate(t *testing.T) {
 		WithScanPolicy(pol).
 		WithScanner(test.DefaultScanner).
 		WantError(false).
-		WithAssertion(func(u *test.Unittest[*testing.T], r ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, r ctrl.Result, err error) {
 			secList := &corev1.SecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), secList))
 			require.Len(t, secList.Items, 1)
 			test.AssertMatchesNonZeroFields(t, *secret, secList.Items[0])
 		}).
-		WithAssertion(func(u *test.Unittest[*testing.T], r ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, r ctrl.Result, err error) {
 			exList := &v1alpha1.ExposedSecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), exList))
 			require.Len(t, exList.Items, 1)
@@ -283,7 +283,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 		}).
 		WithScanner(test.DefaultScanner).
 		WantError(false).
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			list := &v1alpha1.ExposedSecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), list))
 			require.Len(t, list.Items, 1)
@@ -307,8 +307,6 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 
 func TestReconcile_MultipleSecretKeys_ReportOnly(t *testing.T) {
 	fw := test.NewFramework(t)
-
-	// ConfigMap with two secret‑like keys
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "secret-detection-system", Name: "cm"},
 		Data: map[string]string{
@@ -321,7 +319,7 @@ func TestReconcile_MultipleSecretKeys_ReportOnly(t *testing.T) {
 		WithConfigMap(cm).
 		WithScanner(test.DefaultScanner).
 		WantError(false).
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			require.NoError(t, err)
 			list := &v1alpha1.ExposedSecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), list))
@@ -362,14 +360,14 @@ func TestReconcile_AutoRemediate_WithConfigMapMutation(t *testing.T) {
 		WithScanPolicy(pol).
 		WithScanner(test.DefaultScanner).
 		WantError(false).
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			require.NoError(t, err)
 			secList := &corev1.SecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), secList))
 			require.Len(t, secList.Items, 1)
 			require.Equal(t, "cm-k", secList.Items[0].Name)
 		}).
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			var updated corev1.ConfigMap
 			require.NoError(t, u.Client.Get(
 				u.T.Context(),
@@ -410,8 +408,7 @@ func TestReconcile_AutoRemediate_MultipleKeys(t *testing.T) {
 		WithScanPolicy(pol).
 		WithScanner(test.DefaultScanner).
 		WantError(false).
-		// both keys yield two Secrets
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			require.NoError(t, err)
 			secList := &corev1.SecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), secList))
@@ -424,8 +421,7 @@ func TestReconcile_AutoRemediate_MultipleKeys(t *testing.T) {
 			require.Contains(t, names, "cm-k1")
 			require.Contains(t, names, "cm-k2")
 		}).
-		// ...and two ExposedSecrets indicating remediation
-		WithAssertion(func(u *test.Unittest[*testing.T], _ ctrl.Result, err error) {
+		WithAssertion(func(u *test.Unittest, _ ctrl.Result, err error) {
 			exList := &v1alpha1.ExposedSecretList{}
 			require.NoError(t, u.Client.List(u.T.Context(), exList))
 			require.Len(t, exList.Items, 2)

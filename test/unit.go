@@ -3,6 +3,7 @@ package test
 import (
 	"log/slog"
 	"strings"
+	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
@@ -25,63 +26,63 @@ var DefaultScanner = &scanners.ScannerMock{
 	DetectSeverityFunc: func(_ string) v1alpha1.Severity { return v1alpha1.SeverityHigh },
 }
 
-type Unittest[T TestingT] struct {
-	T          T
+type Unittest struct {
+	T          testing.TB
 	Client     client.Client
-	client     *fake.ClientBuilder
+	builder    *fake.ClientBuilder
 	cfgMap     *corev1.ConfigMap
 	scheme     *runtime.Scheme
 	scanner    scanners.Scanner
 	wantErr    bool
-	assertions []func(*Unittest[T], ctrl.Result, error)
+	assertions []func(*Unittest, ctrl.Result, error)
 }
 
-func (t *Unittest[T]) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest[T] {
+func (t *Unittest) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest {
 	t.T.Helper()
 	if policy == nil {
 		return t
 	}
-	t.client = t.client.WithObjects(policy).WithStatusSubresource(policy)
+	t.builder = t.builder.WithObjects(policy).WithStatusSubresource(policy)
 	return t
 }
 
-func (t *Unittest[T]) WithConfigMap(cm *corev1.ConfigMap) *Unittest[T] {
+func (t *Unittest) WithConfigMap(cm *corev1.ConfigMap) *Unittest {
 	t.T.Helper()
 	if cm == nil {
 		return t
 	}
-	t.client = t.client.WithObjects(cm)
+	t.builder = t.builder.WithObjects(cm)
 	t.cfgMap = cm
 	return t
 }
 
-func (t *Unittest[T]) WithInterceptor(interceptor interceptor.Funcs) *Unittest[T] { //nolint:gocritic // performance is irrelevant when testing
+func (t *Unittest) WithInterceptor(interceptor interceptor.Funcs) *Unittest { //nolint:gocritic // performance is irrelevant when testing
 	t.T.Helper()
-	t.client = t.client.WithInterceptorFuncs(interceptor)
+	t.builder = t.builder.WithInterceptorFuncs(interceptor)
 	return t
 }
 
-func (t *Unittest[T]) WithAssertion(assertion func(*Unittest[T], ctrl.Result, error)) *Unittest[T] {
+func (t *Unittest) WithAssertion(assertion func(*Unittest, ctrl.Result, error)) *Unittest {
 	t.T.Helper()
 	t.assertions = append(t.assertions, assertion)
 	return t
 }
 
-func (t *Unittest[T]) WithScanner(scanner scanners.Scanner) *Unittest[T] {
+func (t *Unittest) WithScanner(scanner scanners.Scanner) *Unittest {
 	t.T.Helper()
 	t.scanner = scanner
 	return t
 }
 
-func (t *Unittest[T]) WantError(err bool) *Unittest[T] {
+func (t *Unittest) WantError(err bool) *Unittest {
 	t.T.Helper()
 	t.wantErr = err
 	return t
 }
 
-func (t *Unittest[T]) Run() {
+func (t *Unittest) Run() {
 	t.T.Helper()
-	t.Client = t.client.Build()
+	t.Client = t.builder.Build()
 	r := controllers.NewConfigMapReconciler(t.Client, t.scheme)
 	ctx := logr.NewContextWithSlogLogger(t.T.Context(), slog.Default())
 	if t.cfgMap == nil {

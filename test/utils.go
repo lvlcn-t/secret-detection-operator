@@ -3,22 +3,21 @@ package test
 import (
 	"fmt"
 	"reflect"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 // AssertMatchesNonZeroFields compares two values and checks if they match.
 // It ignores zero values in the "want" value.
-func AssertMatchesNonZeroFields(t require.TestingT, want, got any) {
-	if t, ok := t.(interface{ Helper() }); ok {
-		t.Helper()
-	}
+func AssertMatchesNonZeroFields(t testing.TB, want, got any) {
+	t.Helper()
 	compareValue(t, reflect.ValueOf(want), reflect.ValueOf(got), reflect.TypeOf(want).Name())
 }
 
 // compareValue will descend into structs, slices, maps and pointers.
 // Whenever a field in want is its zero‑value, it’s skipped.
-func compareValue(t require.TestingT, want, got reflect.Value, path string) {
+func compareValue(t testing.TB, want, got reflect.Value, path string) {
 	// if want is not even present, nothing to compare
 	if !want.IsValid() {
 		return
