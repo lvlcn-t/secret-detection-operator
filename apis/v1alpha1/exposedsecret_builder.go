@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/lvlcn-t/secret-detection-operator/apis/validation"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -115,5 +116,5 @@ func (b *ExposedSecretBuilder) Build() *ExposedSecret {
 // NewExposedSecretName creates a new name for the ExposedSecret based on
 // the ConfigMap name and the key that contains the exposed secret.
 func NewExposedSecretName(cfgMap *corev1.ConfigMap, key string) string {
-	return fmt.Sprintf("%s-%s", cfgMap.Name, key)
+	return fmt.Sprintf("%s-%s", cfgMap.Name, validation.MakeDNS1123Subdomain(key))
 }

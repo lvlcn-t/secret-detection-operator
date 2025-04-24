@@ -81,7 +81,7 @@ func (rc *recCtx) process(key string) error {
 	sev := rc.scanner.DetectSeverity(value)
 
 	existing := v1alpha1.ExposedSecret{Spec: v1alpha1.ExposedSecretSpec{Action: v1alpha1.DefaultAction}}
-	err := rc.cl.Get(rc.ctx, client.ObjectKey{Namespace: rc.configMap.Namespace, Name: key}, &existing)
+	err := rc.cl.Get(rc.ctx, client.ObjectKey{Namespace: rc.configMap.Namespace, Name: v1alpha1.NewExposedSecretName(rc.configMap, key)}, &existing)
 	if err != nil && !errors.IsNotFound(err) {
 		rc.log.ErrorContext(rc.ctx, "Failed to get ExposedSecret", "error", err)
 		return fmt.Errorf("failed to get ExposedSecret: %w", err)
