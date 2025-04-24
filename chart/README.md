@@ -19,6 +19,7 @@ A Helm chart to install the Secret Detection Operator.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Affinity rules for pod scheduling |
+| config | object | `{}` | You can use a JSON object or a YAML object. |
 | fullnameOverride | string | `""` | Override the full name of the chart |
 | image | object | `{"pullPolicy":"IfNotPresent","repository":"ghcr.io/lvlcn-t/secret-detection-operator","tag":""}` | Image configuration |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy |

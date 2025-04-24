@@ -56,3 +56,15 @@ Create the name of the service account to use
 {{- define "chart.serviceAccountName" -}}
 {{- default (printf "%s-sa" (include "chart.fullname" .)) .Values.serviceAccount.name }}
 {{- end }}
+
+{{/*
+Get the release namespace or default to "secret-detection-system"
+*/}}
+{{- define "chart.namespace" -}}
+{{- if .Release.Namespace -}}
+{{ .Release.Namespace }}
+{{- else -}}
+secret-detection-system
+{{- end -}}
+{{- end }}
+

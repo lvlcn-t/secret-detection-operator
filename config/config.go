@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/lvlcn-t/go-kit/config"
 )
@@ -13,8 +12,9 @@ type Config struct {
 	LeaderElect bool   `json:"leaderElect,omitempty"`
 }
 
+// IsEmpty always returns false, since an empty config should be evaluated as a valid config.
 func (c *Config) IsEmpty() bool {
-	return reflect.DeepEqual(c, &Config{})
+	return false
 }
 
 func (c *Config) WithDefaults() *Config {

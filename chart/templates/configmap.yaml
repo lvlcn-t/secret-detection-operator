@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "chart.fullname" . }}-config
+  namespace: {{ include "chart.namespace" . }}
+data:
+  config.json: |-
+    {{- $type := typeOf .Values.config }}
+    {{- if or (eq $type "map") (eq $type "map[string]interface {}") }}
+    {{ toJson .Values.config | nindent 4 }}
+    {{- else }}
+    {{- fail (printf "Config must be a valid JSON object (map; currently: %s)" $type) }}
+    {{- end }}

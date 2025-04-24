@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "chart.fullname" . }}
+  namespace: {{ include "chart.namespace" . }}
   labels:
     {{- include "chart.labels" . | nindent 4 }}
 spec:
@@ -31,6 +32,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --config=/config/config.json
           ports:
             - name: metrics
               containerPort: 9090
@@ -48,6 +51,15 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: {{ include "chart.fullname" . }}-config
+              mountPath: /config
+              subPath: config.json
+              readOnly: true
+      volumes:
+        - name: {{ include "chart.fullname" . }}-config
+          configMap:
+            name: {{ include "chart.fullname" . }}-config
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

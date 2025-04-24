@@ -2,5 +2,6 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
 - secret-detection-operator-Deployment.yaml
+- secret-detection-operator-config-ConfigMap.yaml
 - secret-detection-operator-service-Service.yaml
 - secret-detection-operator-servicemonitor-ServiceMonitor.yaml

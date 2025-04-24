@@ -21,6 +21,10 @@ serviceAccount:
   # -- If not set, a name is generated using the fullname template
   name: ""
 
+# -- Config of the secret detection operator.
+# -- You can use a JSON object or a YAML object.
+config: {}
+
 # -- Annotations to add to the Pod
 podAnnotations: {}
 

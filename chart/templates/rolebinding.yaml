@@ -9,7 +9,8 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: {{ include "chart.serviceAccountName" . }}
+    namespace: {{ include "chart.namespace" . }}
 roleRef:
   kind: ClusterRole
-  name: {{ include "chart.fullname" . }}
+  name: {{ include "chart.fullname" . }}-role
   apiGroup: rbac.authorization.k8s.io
