@@ -40,7 +40,18 @@ rules:
       - secretdetection.lvlcn-t.dev
     resources:
       - exposedsecrets/status
+      - scanpolicies/status
     verbs:
       - get
       - patch
       - update
+  - apiGroups:
+      - secretdetection.lvlcn-t.dev
+    resources:
+      - scanpolicies
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch

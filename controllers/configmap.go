@@ -21,6 +21,8 @@ var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=scanpolicies,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=scanpolicies/status,verbs=get;update;patch
 
 // ConfigMapReconciler scans ConfigMaps for secret values and optionally migrates them
 // to a corresponding Secret and reports findings via the [v1alpha1.ExposedSecret] custom resource.

@@ -22,10 +22,15 @@ manifests: $(CONTROLLER_GEN) ## Generate CRDs and RBAC manifests
 	  output:rbac:dir=config/.tmp/rbac
 	@find config/crd/bases -type f -name '*.yaml' ! -name 'kustomization.yaml' -exec cp {} chart/crds/ \;
 	@$(MAKE) sync-helm-rbac
+	@$(MAKE) sync-kustomize
 
 .PHONY: sync-helm-rbac
 sync-helm-rbac: ## Sync RBAC manifests to Helm chart
 	@hack/sync-helm-rbac.sh
+
+.PHONY: sync-kustomize
+sync-kustomize: ## Sync Kustomize manifests to Helm chart
+	@hack/sync-kustomize.sh
 
 $(CONTROLLER_GEN): ## Install controller-gen
 	GOBIN=$(shell pwd)/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
