@@ -13,6 +13,7 @@
 - [🛡️ Configuration with ScanPolicy](#️-configuration-with-scanpolicy)
   - [Example ScanPolicy](#example-scanpolicy)
 - [📌 Example Usage](#-example-usage)
+- [📊 Metrics](#-metrics)
 - [Code of Conduct](#code-of-conduct)
 - [Working Language](#working-language)
 - [Support and Feedback](#support-and-feedback)
@@ -162,6 +163,20 @@ status:
   LastUpdateTime: "2024-01-01T00:00:00Z"
   ObservedGeneration: 2
 ```
+
+## 📊 Metrics
+
+The Secret Detection Operator exports the following custom Prometheus metrics to help you monitor its performance and behavior:
+
+| Metric Name                  | Type      | Labels                  | Description                                                                                                                      |
+| ---------------------------- | --------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `configmap_reconciles_total` | Counter   | `namespace`             | Total number of ConfigMap reconcile loops executed.                                                                              |
+| `reconcile_duration_seconds` | Histogram | `namespace`             | Duration (seconds) of each reconcile loop.                                                                                       |
+| `keys_scanned`               | Histogram | `namespace`             | Number of data keys examined in each ConfigMap.                                                                                  |
+| `secrets_detected_total`     | Counter   | `namespace`, `severity` | Total secrets detected, broken down by severity (`Unknown`, `Low`, `Medium`, `High`, `Critical`).                                |
+| `secrets_remediated_total`   | Counter   | `namespace`             | Total secrets automatically remediated (migrated into Secrets).                                                                  |
+| `configmaps_mutated_total`   | Counter   | `namespace`             | Total ConfigMaps that were mutated to remove secret keys.                                                                        |
+| `reconcile_errors_total`     | Counter   | `namespace`, `stage`    | Total errors during reconciliation, labeled by stage:<br>`load_policy`, `get_configmap`, `process_key`, `remediate_secret`, etc. |
 
 ## Code of Conduct
 

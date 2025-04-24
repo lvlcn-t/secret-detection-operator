@@ -2,10 +2,12 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,23 +37,35 @@ func NewConfigMapReconciler(c client.Client, s *runtime.Scheme) *ConfigMapReconc
 // Reconcile scans the ConfigMap for secret-like keys and processes them according to a [v1alpha1.ScanPolicy].
 // It creates or updates [v1alpha1.ExposedSecret] resources to report findings.
 func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	start := time.Now()
+	namespace := req.Namespace
+	ConfigMapReconciles.WithLabelValues(namespace).Inc()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		ReconcileDuration.WithLabelValues(namespace).Observe(duration)
+	}()
+
 	log := logr.FromContextAsSlogLogger(ctx)
 	log.InfoContext(ctx, "Reconciling ConfigMap", "ConfigMap", req.NamespacedName)
 
 	policy, err := r.loadScanPolicy(ctx, req.Namespace)
 	if err != nil {
+		ReconcileErrors.WithLabelValues(namespace, stageLoadPolicy).Inc()
 		log.ErrorContext(ctx, "Failed to get ScanPolicy", "error", err)
 		return ctrl.Result{}, err
 	}
 
 	var cfgMap corev1.ConfigMap
 	if err = r.Get(ctx, req.NamespacedName, &cfgMap); err != nil {
+		if !errors.IsNotFound(err) {
+			ReconcileErrors.WithLabelValues(namespace, stageGetConfigMap).Inc()
+		}
 		log.WarnContext(ctx, "Failed to get ConfigMap", "error", err)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	rc := newRecCtx(r.Client, policy, &cfgMap)
-	return rc.run(ctx)
+	return ctrl.Result{}, rc.run(ctx)
 }
 
 // DefaultScanPolicy is the default ScanPolicy used when none is found in the namespace.

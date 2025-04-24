@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,14 +47,15 @@ func newRecCtx(c client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMa
 
 // run executes the reconciliation for the ConfigMap: it scans for secret-like keys,
 // filters excluded keys, and processes each remaining key according to policy.
-func (rc *recCtx) run(ctx context.Context) (ctrl.Result, error) {
+func (rc *recCtx) run(ctx context.Context) error {
 	rc.ctx = ctx
 	rc.log = logr.FromContextAsSlogLogger(ctx).With("ConfigMap", rc.configMap.Name)
 
 	keys := rc.findSecretKeys()
+	KeysScanned.WithLabelValues(rc.configMap.Namespace).Observe(float64(len(rc.configMap.Data)))
 	if len(keys) == 0 {
 		rc.log.DebugContext(ctx, "No secret-like data keys found")
-		return ctrl.Result{}, nil
+		return nil
 	}
 
 	for _, key := range keys {
@@ -65,12 +65,13 @@ func (rc *recCtx) run(ctx context.Context) (ctrl.Result, error) {
 		}
 
 		if err := rc.process(key); err != nil {
+			ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageProcessKey).Inc()
 			rc.log.ErrorContext(ctx, "Failed to process key", "key", key, "error", err)
-			return ctrl.Result{}, err
+			return err
 		}
 		rc.log.DebugContext(ctx, "Processed key", "key", key)
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // process handles a single ConfigMap key: it builds an ExposedSecret, creates it if missing,
@@ -95,6 +96,7 @@ func (rc *recCtx) process(key string) error {
 	rc.log.DebugContext(rc.ctx, "Resolved action",
 		"action", res.Action, "severity", res.FinalSeverity,
 		"phase", res.FinalPhase, "message", res.Message)
+	SecretsDetected.WithLabelValues(rc.configMap.Namespace, string(res.FinalSeverity)).Inc()
 
 	builder = builder.
 		WithAction(res.Action).
@@ -105,6 +107,7 @@ func (rc *recCtx) process(key string) error {
 	if res.Action == v1alpha1.ActionAutoRemediate {
 		secret, rErr := rc.doRemediation(builder, key)
 		if rErr != nil {
+			ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageRemediate).Inc()
 			rc.log.ErrorContext(rc.ctx, "Failed to do remediation", "error", rErr)
 			return fmt.Errorf("failed to do remediation: %w", rErr)
 		}
@@ -141,6 +144,7 @@ func (rc *recCtx) doRemediation(b *v1alpha1.ExposedSecretBuilder, key string) (*
 		return nil, fmt.Errorf("failed to create or update Secret: %w", err)
 	}
 	rc.log.InfoContext(rc.ctx, "Secret created")
+	SecretsRemediated.WithLabelValues(rc.configMap.Namespace).Inc()
 
 	if rc.policy.Spec.EnableConfigMapMutation {
 		if err := rc.autoRemediateConfigMap(secret, key); err != nil {
@@ -148,6 +152,7 @@ func (rc *recCtx) doRemediation(b *v1alpha1.ExposedSecretBuilder, key string) (*
 			return nil, fmt.Errorf("failed to update ConfigMap: %w", err)
 		}
 		rc.log.InfoContext(rc.ctx, "Auto-remediated ConfigMap", "key", key)
+		ConfigMapsMutated.WithLabelValues(rc.configMap.Namespace).Inc()
 	}
 	return secret, nil
 }
