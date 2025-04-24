@@ -1,7 +1,6 @@
 module github.com/lvlcn-t/secret-detection-operator
 
 go 1.24
-
 toolchain go1.24.2
 
 tool github.com/matryer/moq
@@ -12,7 +11,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/zricethezav/gitleaks/v8 v8.24.3
 	k8s.io/api v0.32.4
-	k8s.io/apimachinery v0.32.4
+	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.32.4
 	sigs.k8s.io/controller-runtime v0.20.4
 )
@@ -48,7 +47,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/h2non/filetype v1.1.3 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
