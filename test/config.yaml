@@ -1,9 +1,6 @@
 defaultScanPolicy: |
   apiVersion: v1
   kind: ScanPolicy
-  metadata:
-    name: default-scan-policy
-    namespace: secret-detection-system
   spec:
     action: ReportOnly
     minSeverity: Low

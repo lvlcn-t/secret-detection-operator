@@ -44,6 +44,7 @@ func (t *Unittest) WithConfig(cfg *config.Config) *Unittest {
 	if cfg == nil {
 		return t
 	}
+	require.NoError(t.T, cfg.Validate(t.T.Context(), t.Client))
 	t.cfg = cfg
 	return t
 }
@@ -96,10 +97,9 @@ func (t *Unittest) Run() {
 	t.Client = t.builder.Build()
 	r := controllers.NewConfigMapReconciler(t.Client, t.scheme, t.cfg)
 	ctx := logr.NewContextWithSlogLogger(t.T.Context(), slog.Default())
-	if t.cfgMap == nil {
-		require.Fail(t.T, "ConfigMap is required")
-		return
-	}
+
+	require.NotNil(t.T, t.cfgMap, "ConfigMap is required for the test")
+
 	if t.scanner != nil {
 		scanners.Set(t.T, t.scanner.Name(), t.scanner)
 	}

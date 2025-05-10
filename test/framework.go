@@ -26,10 +26,13 @@ func (f *Framework) Unit(t testing.TB) *Unittest {
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, v1alpha1.AddToScheme(scheme))
 
+	cfg := loadConfig(t)
+	// Always make sure our default config is valid.
+	require.NoError(t, cfg.Validate(t.Context(), fake.NewClientBuilder().WithScheme(scheme).Build()))
 	return &Unittest{
 		T:          t,
 		builder:    fake.NewClientBuilder().WithScheme(scheme),
-		cfg:        loadConfig(t),
+		cfg:        cfg,
 		scheme:     scheme,
 		assertions: []func(*Unittest, ctrl.Result, error){},
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/afero"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -87,7 +86,7 @@ func (rc *rawConfig) toConfig() (c *Config, err error) {
 	return &cfg, nil
 }
 
-// validationMeta is the metadata used for all default objects.
+// validationMeta is the metadata used for all Kubernetes objects in the operator's configuration.
 // It's needed for the validation of the objects against the Kubernetes API server.
 var validationMeta = metav1.ObjectMeta{
 	GenerateName: "validation-",
@@ -111,7 +110,7 @@ const bufferSize = 1024
 // loadStringValue loads a value from a string.
 // If the string is empty, it returns the default value.
 // Returns an error if the string cannot be decoded into the value type.
-func loadStringValue[T runtime.Object](raw string, defaultVal T) (T, error) {
+func loadStringValue[T client.Object](raw string, defaultVal T) (T, error) {
 	// obj ensures that we always have a non-nil object to work with.
 	obj := defaultVal.DeepCopyObject().(T)
 	if raw == "" {
@@ -123,6 +122,9 @@ func loadStringValue[T runtime.Object](raw string, defaultVal T) (T, error) {
 		return obj, fmt.Errorf("failed to decode value: %w", err)
 	}
 
+	// Set some metadata to the object to have a valid object during validation.
+	obj.SetGenerateName(validationMeta.GenerateName)
+	obj.SetNamespace(validationMeta.Namespace)
 	return obj, nil
 }
 
