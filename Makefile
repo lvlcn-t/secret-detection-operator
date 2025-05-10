@@ -25,7 +25,7 @@ rbac-crd: $(CONTROLLER_GEN) ## Generate RBAC manifests
 	@find config/crd/bases -type f -name '*.yaml' ! -name 'kustomization.yaml' -exec cp {} chart/crds/ \;
 
 .PHONY: manifests
-manifests: rbac-crd webhook sync-chart sync-kustomize ## Generate manifests
+manifests: rbac-crd sync-chart sync-kustomize ## Generate manifests
 
 .PHONY: sync-chart
 sync-chart: $(YQ) ## Sync manifests to the Helm chart
