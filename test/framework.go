@@ -12,17 +12,15 @@ import (
 )
 
 type Framework struct {
-	t testing.TB
+	T testing.TB
 }
 
-func NewFramework[T testing.TB](t T) *Framework {
-	return &Framework{
-		t: t,
-	}
+func NewFramework(t testing.TB) *Framework {
+	return &Framework{T: t}
 }
 
 func (f *Framework) Unit(t testing.TB) *Unittest {
-	f.t.Helper()
+	f.T.Helper()
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, v1alpha1.AddToScheme(scheme))

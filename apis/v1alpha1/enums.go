@@ -117,26 +117,26 @@ func (ha HashAlgorithm) String() string {
 }
 
 const (
+	// AlgorithmNone is the no hashing algorithm.
+	AlgorithmNone HashAlgorithm = "none"
 	// AlgorithmSHA256 is the SHA-256 hashing algorithm.
 	AlgorithmSHA256 HashAlgorithm = "sha256"
 	// AlgorithmSHA512 is the SHA-512 hashing algorithm.
 	AlgorithmSHA512 HashAlgorithm = "sha512"
-	// AlgorithmNone is the no hashing algorithm.
-	AlgorithmNone HashAlgorithm = "none"
 )
 
 // Hash hashes the given secret value using the hashing algorithm.
 // It returns the hashed value as a string prefixed with the algorithm name.
 func (ha HashAlgorithm) Hash(secret string) string {
 	switch ha {
+	case AlgorithmNone:
+		return base64.StdEncoding.EncodeToString([]byte(secret))
 	case AlgorithmSHA256:
 		hash := sha256.Sum256([]byte(secret))
 		return "sha256:" + hex.EncodeToString(hash[:])
 	case AlgorithmSHA512:
 		hash := sha512.Sum512([]byte(secret))
 		return "sha512:" + hex.EncodeToString(hash[:])
-	case AlgorithmNone:
-		return base64.StdEncoding.EncodeToString([]byte(secret))
 	default:
 		return "<unsupported>"
 	}

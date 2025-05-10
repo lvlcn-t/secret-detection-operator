@@ -35,7 +35,7 @@ func MakeDNS1123Subdomain(s string) string {
 	}
 
 	if len(s) > maxLen {
-		s = s[:253]
+		s = s[:maxLen]
 		s = strings.TrimRight(s, "-")
 	}
 	return s

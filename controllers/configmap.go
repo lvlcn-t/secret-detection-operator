@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/config"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +30,7 @@ var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 type ConfigMapReconciler struct {
 	client.Client
 	scheme *runtime.Scheme
+	config *config.Config
 }
 
 // NewConfigMapReconciler creates a new [ConfigMapReconciler].
@@ -70,16 +72,6 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	return ctrl.Result{}, rc.run(ctx)
 }
 
-// DefaultScanPolicy is the default ScanPolicy used when none is found in the namespace.
-var DefaultScanPolicy = &v1alpha1.ScanPolicy{
-	Spec: v1alpha1.ScanPolicySpec{
-		Action:        v1alpha1.ActionReportOnly,
-		MinSeverity:   v1alpha1.SeverityMedium,
-		Scanner:       v1alpha1.ScannerGitleaks,
-		HashAlgorithm: v1alpha1.AlgorithmSHA256,
-	},
-}
-
 // loadScanPolicy retrieves the ScanPolicy for the given namespace.
 // If no ScanPolicy is found, it returns a default policy.
 // If multiple policies are found, it uses the first one found.
@@ -93,14 +85,15 @@ func (r *ConfigMapReconciler) loadScanPolicy(ctx context.Context, namespace stri
 
 	if len(scanPolicies.Items) == 0 {
 		log.DebugContext(ctx, "No ScanPolicies found, using default values")
-		return DefaultScanPolicy.DeepCopy(), nil
+		return r.config.ScanPolicy.DeepCopy(), nil
 	}
 
+	// TODO: should we merge the policies with some merging strategy?
 	if len(scanPolicies.Items) > 1 {
 		log.WarnContext(ctx, "Multiple ScanPolicies found, using the first one", "ScanPolicy", scanPolicies.Items[0].Name)
 	}
 
-	sp := &scanPolicies.Items[0]
+	sp := scanPolicies.Items[0].DeepCopy()
 	sp.Status.LastProcessedTime = metav1.Now()
 	if err := r.Status().Update(ctx, sp); err != nil {
 		log.ErrorContext(ctx, "Failed to update ScanPolicy status", "error", err)

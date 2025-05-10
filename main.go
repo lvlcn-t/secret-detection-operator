@@ -26,6 +26,12 @@ func init() { //nolint:gochecknoinits // Common pattern for controller-runtime
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 }
 
+const (
+	metricsAddr    = ":9090"
+	healthAddr     = ":8080"
+	leaderElection = false
+)
+
 func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "Path to the configuration file")
@@ -37,18 +43,12 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
 
-	cfg, err := config.Load(configPath)
-	if err != nil {
-		setupLog.Error(err, "Unable to load configuration")
-		os.Exit(1)
-	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		Metrics:                server.Options{BindAddress: cfg.MetricsAddr},
-		LeaderElection:         cfg.LeaderElect,
-		LeaderElectionID:       "secret-detection-operator",
-		HealthProbeBindAddress: cfg.HealthAddr,
+		Metrics:                server.Options{BindAddress: metricsAddr},
+		HealthProbeBindAddress: healthAddr,
+		LeaderElection:         leaderElection,
+		LeaderElectionID:       config.AppURL,
 	})
 	if err != nil {
 		setupLog.Error(err, "Unable to start manager")

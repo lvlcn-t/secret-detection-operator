@@ -32,8 +32,8 @@ type ScanPolicySpec struct {
 	Scanner ScannerName `json:"scanner,omitempty"`
 
 	// HashAlgorithm defines how secret values are hashed before reporting.
-	// +kubebuilder:validation:Enum=sha256;sha512;none
-	// +kubebuilder:default=sha256
+	// +kubebuilder:validation:Enum=none;sha256;sha512
+	// +kubebuilder:default=none
 	HashAlgorithm HashAlgorithm `json:"hashAlgorithm,omitempty"`
 }
 
