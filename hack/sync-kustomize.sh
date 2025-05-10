@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="$PATH:$(pwd)/bin"
+
 CHART_DIR="./chart"
 CONFIG_DIR="./config"
 GENERATED_DIR="$CONFIG_DIR/generated"

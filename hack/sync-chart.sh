@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+export PATH="$PATH:$(pwd)/bin"
+
 # where to read generated RBAC
 CONFIG_RBAC="config/.tmp/rbac"
 # where to write your chart templates
