@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/config"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,7 +29,15 @@ func (f *Framework) Unit(t testing.TB) *Unittest {
 	return &Unittest{
 		T:          t,
 		builder:    fake.NewClientBuilder().WithScheme(scheme),
+		cfg:        loadConfig(t),
 		scheme:     scheme,
 		assertions: []func(*Unittest, ctrl.Result, error){},
 	}
+}
+
+func loadConfig(t testing.TB) *config.Config {
+	t.Helper()
+	cfg, err := config.LoadFS("config.yaml", FS)
+	require.NoError(t, err)
+	return cfg
 }

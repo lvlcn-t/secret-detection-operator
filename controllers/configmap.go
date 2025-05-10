@@ -34,8 +34,8 @@ type ConfigMapReconciler struct {
 }
 
 // NewConfigMapReconciler creates a new [ConfigMapReconciler].
-func NewConfigMapReconciler(c client.Client, s *runtime.Scheme) *ConfigMapReconciler {
-	return &ConfigMapReconciler{Client: c, scheme: s}
+func NewConfigMapReconciler(c client.Client, s *runtime.Scheme, cfg *config.Config) *ConfigMapReconciler {
+	return &ConfigMapReconciler{Client: c, scheme: s, config: cfg}
 }
 
 // Reconcile scans the ConfigMap for secret-like keys and processes them according to a [v1alpha1.ScanPolicy].
@@ -89,6 +89,7 @@ func (r *ConfigMapReconciler) loadScanPolicy(ctx context.Context, namespace stri
 	}
 
 	// TODO: should we merge the policies with some merging strategy?
+	// Alternatively we could implement a webhook to ensure only one ScanPolicy per namespace.
 	if len(scanPolicies.Items) > 1 {
 		log.WarnContext(ctx, "Multiple ScanPolicies found, using the first one", "ScanPolicy", scanPolicies.Items[0].Name)
 	}

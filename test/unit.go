@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/config"
 	"github.com/lvlcn-t/secret-detection-operator/controllers"
 	"github.com/lvlcn-t/secret-detection-operator/scanners"
 	"github.com/stretchr/testify/require"
@@ -30,11 +31,21 @@ type Unittest struct {
 	T          testing.TB
 	Client     client.Client
 	builder    *fake.ClientBuilder
+	cfg        *config.Config
 	cfgMap     *corev1.ConfigMap
 	scheme     *runtime.Scheme
 	scanner    scanners.Scanner
 	wantErr    bool
 	assertions []func(*Unittest, ctrl.Result, error)
+}
+
+func (t *Unittest) WithConfig(cfg *config.Config) *Unittest {
+	t.T.Helper()
+	if cfg == nil {
+		return t
+	}
+	t.cfg = cfg
+	return t
 }
 
 func (t *Unittest) WithScanPolicy(policy *v1alpha1.ScanPolicy) *Unittest {
@@ -83,7 +94,7 @@ func (t *Unittest) WantError(err bool) *Unittest {
 func (t *Unittest) Run() {
 	t.T.Helper()
 	t.Client = t.builder.Build()
-	r := controllers.NewConfigMapReconciler(t.Client, t.scheme)
+	r := controllers.NewConfigMapReconciler(t.Client, t.scheme, t.cfg)
 	ctx := logr.NewContextWithSlogLogger(t.T.Context(), slog.Default())
 	if t.cfgMap == nil {
 		require.Fail(t.T, "ConfigMap is required")

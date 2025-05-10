@@ -43,6 +43,13 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
 
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		setupLog.Error(err, "Unable to load configuration")
+		os.Exit(1)
+	}
+	setupLog.Info("Loaded configuration", "config", cfg)
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                server.Options{BindAddress: metricsAddr},
@@ -55,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	controller := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme())
+	controller := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme(), cfg)
 	if err = controller.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "ConfigMap")
 		os.Exit(1)

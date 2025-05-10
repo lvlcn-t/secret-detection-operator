@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/lvlcn-t/go-kit/config"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/spf13/afero"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,10 +60,17 @@ func Load(path string) (*Config, error) {
 	return cfg.toConfig()
 }
 
+// LoadFS loads the [Config] from the provided path using the provided file system.
+// This is useful for testing purposes.
+func LoadFS(path string, fsys fs.FS) (*Config, error) {
+	config.SetFs(afero.FromIOFS{FS: fsys})
+	return Load(path)
+}
+
 // rawConfig is the raw configuration struct which is compliant with a Kubernetes ConfigMap.
 // It is used to unmarshal the configuration from the file or environment variables.
 type rawConfig struct {
-	ScanPolicy string `json:"defaultScanPolicy" yaml:"defaultScanPolicy"`
+	ScanPolicy string `json:"defaultScanPolicy" yaml:"defaultScanPolicy" mapstructure:"defaultScanPolicy"`
 }
 
 func (rc rawConfig) IsEmpty() bool {
