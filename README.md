@@ -12,13 +12,13 @@
 - [🛠️ How it Works](#️-how-it-works)
 - [🛡️ Configuration with ScanPolicy](#️-configuration-with-scanpolicy)
   - [Example ScanPolicy](#example-scanpolicy)
+  - [Default Settings](#default-settings)
 - [📌 Example Usage](#-example-usage)
 - [📊 Metrics](#-metrics)
-- [Code of Conduct](#code-of-conduct)
-- [Working Language](#working-language)
-- [Support and Feedback](#support-and-feedback)
-- [How to Contribute](#how-to-contribute)
-- [Licensing](#licensing)
+- [📃 Code of Conduct](#-code-of-conduct)
+- [📞 Support and Feedback](#-support-and-feedback)
+- [🧑‍💻 How to Contribute](#-how-to-contribute)
+- [🪪 Licensing](#-licensing)
 
 ---
 
@@ -87,12 +87,12 @@ You can define specific behaviors for reporting and remediation through customiz
 
 - **Scanner Engine:** Currently only `gitleaks` is supported, but more engines may be added in the future.
 
-- **Hash Algorithm:** Select how detected secrets are reported (`sha256`, `sha512`, or `none`).
+- **Hash Algorithm:** Select how detected secrets are reported (`sha256`, `sha512`, or `none`). Note that `none` will report the raw value in `base64` format, which may not be secure.
 
 ### Example ScanPolicy
 
 ```yaml
-apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
+apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
 kind: ScanPolicy
 metadata:
   name: default-policy
@@ -108,7 +108,27 @@ spec:
   hashAlgorithm: sha256
 ```
 
-If no ScanPolicy is defined, defaults (`ReportOnly`, `Medium` severity, `gitleaks` scanner) apply.
+### Default Settings
+
+The operator will automatically use a default `ScanPolicy` if no configuration is provided. This policy applies to all namespaces unless overridden by a specific `ScanPolicy` in that namespace.
+
+The default settings are as follows:
+
+```yaml
+apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
+kind: ScanPolicy
+metadata:
+  name: default-policy
+spec:
+  action: ReportOnly
+  minSeverity: Medium
+  excludedKeys: []
+  enableConfigMapMutation: false
+  scanner: gitleaks
+  hashAlgorithm: none
+```
+
+You can customize this default policy by setting the `defaultScanPolicy` field in the operator's configuration.
 
 ---
 
@@ -117,7 +137,7 @@ If no ScanPolicy is defined, defaults (`ReportOnly`, `Medium` severity, `gitleak
 When a secret-like value is detected in a ConfigMap, an `ExposedSecret` resource is created:
 
 ```yaml
-apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
+apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
 kind: ExposedSecret
 metadata:
   name: example-config-map-example-key
@@ -141,7 +161,7 @@ status:
 Upon remediation, the secret value is safely stored in a Kubernetes Secret and the ExposedSecret updated accordingly:
 
 ```yaml
-apiVersion: secret-detection-operator.lvlcn-t.io/v1alpha1
+apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
 kind: ExposedSecret
 metadata:
   name: example-config-map-example-key
@@ -178,22 +198,13 @@ The Secret Detection Operator exports the following custom Prometheus metrics to
 | `configmaps_mutated_total`   | Counter   | `namespace`             | Total ConfigMaps that were mutated to remove secret keys.                                                                        |
 | `reconcile_errors_total`     | Counter   | `namespace`, `stage`    | Total errors during reconciliation, labeled by stage:<br>`load_policy`, `get_configmap`, `process_key`, `remediate_secret`, etc. |
 
-## Code of Conduct
+## 📃 Code of Conduct
 
 This project has adopted the [Contributor Covenant](https://www.contributor-covenant.org/) in version 2.1 as our code of
 conduct. Please see the details in our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). All contributors must abide by the code
 of conduct.
 
-## Working Language
-
-We decided to apply _English_ as the primary project language.
-
-Consequently, all content will be made available primarily in English.
-We also ask all interested people to use English as the preferred language to create issues,
-in their code (comments, documentation, etc.) and when you send requests to us.
-The application itself and all end-user facing content will be made available in other languages as needed.
-
-## Support and Feedback
+## 📞 Support and Feedback
 
 The following channels are available for discussions, feedback, and support requests:
 
@@ -201,15 +212,15 @@ The following channels are available for discussions, feedback, and support requ
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Issues** | [![General Discussion](https://img.shields.io/github/issues/lvlcn-t/secret-detection-operator?style=flat-square)](/../../issues/new/choose) |
 
-## How to Contribute
+## 🧑‍💻 How to Contribute
 
 Contribution and feedback is encouraged and always welcome. For more information about how to contribute, the project
 structure, as well as additional contribution information, see our [Contribution Guidelines](./CONTRIBUTING.md). By
 participating in this project, you agree to abide by its [Code of Conduct](./CODE_OF_CONDUCT.md) at all times.
 
-## Licensing
+## 🪪 Licensing
 
-Copyright (c) 2024 lvlcn-t.
+Copyright (c) 2025 lvlcn-t.
 
 Licensed under the **MIT** (the "License"); you may not use this file except in compliance with
 the License.

@@ -1,5 +1,5 @@
 defaultScanPolicy: |
-  apiVersion: v1
+  apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
   kind: ScanPolicy
   spec:
     action: ReportOnly
