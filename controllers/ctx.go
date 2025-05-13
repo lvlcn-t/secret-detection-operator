@@ -104,14 +104,10 @@ func (rc *recCtx) process(key string) error {
 		WithPhase(res.FinalPhase).
 		WithSeverity(res.FinalSeverity)
 
-	if res.Action == v1alpha1.ActionAutoRemediate {
-		secret, rErr := rc.doRemediation(builder, key)
-		if rErr != nil {
-			ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageRemediate).Inc()
-			rc.log.ErrorContext(rc.ctx, "Failed to do remediation", "error", rErr)
-			return fmt.Errorf("failed to do remediation: %w", rErr)
-		}
-		builder = builder.WithRemediated(secret)
+	if err = rc.doSideEffects(res, builder, key); err != nil {
+		ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageSideEffect).Inc()
+		rc.log.ErrorContext(rc.ctx, "Failed to do side effects", "error", err)
+		return fmt.Errorf("failed to do side effects: %w", err)
 	}
 
 	es := builder.Build()
@@ -120,6 +116,23 @@ func (rc *recCtx) process(key string) error {
 		return fmt.Errorf("failed to create or update ExposedSecret: %w", err)
 	}
 	rc.log.DebugContext(rc.ctx, "Created or updated ExposedSecret")
+	return nil
+}
+
+// doSideEffects performs any side effects required by the resolved action.
+// This function mutates the provided ExposedSecretBuilder in place to reflect
+// the changes caused by the side effects (e.g., remediation).
+func (rc *recCtx) doSideEffects(res ResolvedAction, builder *v1alpha1.ExposedSecretBuilder, key string) error {
+	if res.Action == v1alpha1.ActionAutoRemediate {
+		secret, rErr := rc.doRemediation(builder, key)
+		if rErr != nil {
+			ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageRemediate).Inc()
+			rc.log.ErrorContext(rc.ctx, "Failed to do remediation", "error", rErr)
+			return fmt.Errorf("failed to do remediation: %w", rErr)
+		}
+		builder.WithRemediated(secret)
+	}
+
 	return nil
 }
 

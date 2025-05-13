@@ -10,6 +10,7 @@ const (
 	stageLoadPolicy   = "load_policy"
 	stageGetConfigMap = "get_configmap"
 	stageProcessKey   = "process_key"
+	stageSideEffect   = "side_effect"
 	stageRemediate    = "remediate_secret"
 )
 
