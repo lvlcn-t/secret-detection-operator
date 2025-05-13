@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/afero v1.14.0
 	github.com/stretchr/testify v1.10.0
-	github.com/zricethezav/gitleaks/v8 v8.25.1
+	github.com/zricethezav/gitleaks/v8 v8.26.0
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0
