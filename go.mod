@@ -5,7 +5,7 @@ go 1.24.2
 tool github.com/matryer/moq
 
 require (
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
 	github.com/lvlcn-t/go-kit/config v0.3.0
 	github.com/prometheus/client_golang v1.22.0
