@@ -1,4 +1,4 @@
-FROM alpine:3.21 AS prep
+FROM alpine:3.22 AS prep
 
 RUN apk add --no-cache ca-certificates
 RUN adduser \
