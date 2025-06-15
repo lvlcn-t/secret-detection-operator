@@ -10,6 +10,8 @@ import (
 	"github.com/lvlcn-t/secret-detection-operator/config"
 	"github.com/lvlcn-t/secret-detection-operator/controllers"
 	"github.com/lvlcn-t/secret-detection-operator/scanners"
+	"github.com/lvlcn-t/secret-detection-operator/scanners/factory"
+	"github.com/lvlcn-t/secret-detection-operator/scanners/gitleaks"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,9 +24,9 @@ import (
 const secretValue = "my-secret"
 
 var DefaultScanner = &scanners.ScannerMock{
-	NameFunc:           func() v1alpha1.ScannerName { return v1alpha1.ScannerGitleaks },
+	NameFunc:           func() scanners.Name { return gitleaks.Name },
 	IsSecretFunc:       func(value string) bool { return strings.Contains(value, secretValue) },
-	DetectSeverityFunc: func(_ string) v1alpha1.Severity { return v1alpha1.SeverityHigh },
+	DetectSeverityFunc: func(_ string) scanners.Severity { return scanners.SeverityHigh },
 }
 
 type Unittest struct {
@@ -101,7 +103,7 @@ func (t *Unittest) Run() {
 	require.NotNil(t.T, t.cfgMap, "ConfigMap is required for the test")
 
 	if t.scanner != nil {
-		scanners.Set(t.T, t.scanner.Name(), t.scanner)
+		factory.Set(t.T, t.scanner.Name(), t.scanner)
 	}
 
 	req := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(t.cfgMap)}

@@ -5,10 +5,8 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
-	"strings"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/lvlcn-t/secret-detection-operator/scanners"
 )
 
 // Action represents the action to take when
@@ -34,51 +32,7 @@ const (
 
 // Severity represents the severity level of
 // a secret detected in a ConfigMap.
-type Severity string
-
-// String returns the string representation of the severity.
-func (s Severity) String() string {
-	return string(s)
-}
-
-// Int returns the integer representation of the severity.
-// It maps the severity levels to integers:
-// Low -> 1, Medium -> 2, High -> 3, Critical -> 4.
-// If the severity is not recognized, it returns 0.
-func (s Severity) Int() int {
-	switch s {
-	case SeverityLow:
-		const low = 1
-		return low
-	case SeverityMedium:
-		const medium = 2
-		return medium
-	case SeverityHigh:
-		const high = 3
-		return high
-	case SeverityCritical:
-		const critical = 4
-		return critical
-	default:
-		const unknown = 0
-		return unknown
-	}
-}
-
-const (
-	// UnknownSeverity indicates an unknown severity secret
-	// This is the default value if no severity is specified
-	// or if the severity is not recognized.
-	SeverityUnknown Severity = "Unknown"
-	// SeverityLow indicates a low severity secret
-	SeverityLow Severity = "Low"
-	// SeverityMedium indicates a medium severity secret
-	SeverityMedium Severity = "Medium"
-	// SeverityHigh indicates a high severity secret
-	SeverityHigh Severity = "High"
-	// SeverityCritical indicates a critical severity secret
-	SeverityCritical Severity = "Critical"
-)
+type Severity = scanners.Severity
 
 // Phase represents the current phase of an
 // ExposedSecret in the reconciliation process.
@@ -99,22 +53,7 @@ const (
 )
 
 // ScannerName represents the name of a secret scanner.
-type ScannerName string
-
-// String returns the string representation of the scanner name.
-func (s ScannerName) String() string {
-	return string(s)
-}
-
-// Normalize returns the scanner name in a normalized format (capitalized).
-func (s ScannerName) Normalize() ScannerName {
-	return ScannerName(cases.Title(language.English).String(strings.ToLower(s.String())))
-}
-
-const (
-	// ScannerGitleaks is the name of the ScannerGitleaks scanner.
-	ScannerGitleaks ScannerName = "Gitleaks"
-)
+type ScannerName = scanners.Name
 
 // HashAlgorithm represents the hashing algorithm
 // used to hash the reported detected exposed secret value.

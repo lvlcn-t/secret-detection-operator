@@ -9,6 +9,7 @@ import (
 const (
 	stageLoadPolicy   = "load_policy"
 	stageGetConfigMap = "get_configmap"
+	stageCtxInit      = "ctx_init"
 	stageProcessKey   = "process_key"
 	stageSideEffect   = "side_effect"
 	stageRemediate    = "remediate_secret"

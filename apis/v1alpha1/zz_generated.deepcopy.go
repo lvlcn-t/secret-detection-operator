@@ -29,7 +29,7 @@ func (in *ExposedSecret) DeepCopyInto(out *ExposedSecret) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec
+	in.Spec.DeepCopyInto(&out.Spec)
 	in.Status.DeepCopyInto(&out.Status)
 }
 
@@ -211,6 +211,11 @@ func (in *ScanPolicySpec) DeepCopyInto(out *ScanPolicySpec) {
 		in, out := &in.ExcludedKeys, &out.ExcludedKeys
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.GitleaksConfig != nil {
+		in, out := &in.GitleaksConfig, &out.GitleaksConfig
+		*out = new(GitleaksConfig)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

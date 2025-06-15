@@ -10,6 +10,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/lvlcn-t/go-kit/config"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/scanners"
+	"github.com/lvlcn-t/secret-detection-operator/scanners/gitleaks"
 	"github.com/spf13/afero"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -97,8 +99,8 @@ var defaultScanPolicy = &v1alpha1.ScanPolicy{
 	ObjectMeta: validationMeta,
 	Spec: v1alpha1.ScanPolicySpec{
 		Action:        v1alpha1.ActionReportOnly,
-		MinSeverity:   v1alpha1.SeverityMedium,
-		Scanner:       v1alpha1.ScannerGitleaks,
+		MinSeverity:   scanners.SeverityMedium,
+		Scanner:       gitleaks.Name,
 		HashAlgorithm: v1alpha1.AlgorithmNone,
 	},
 }

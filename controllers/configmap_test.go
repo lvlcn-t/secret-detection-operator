@@ -13,6 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"github.com/lvlcn-t/secret-detection-operator/scanners"
+	"github.com/lvlcn-t/secret-detection-operator/scanners/gitleaks"
 	"github.com/lvlcn-t/secret-detection-operator/test"
 )
 
@@ -31,7 +33,7 @@ func TestReconcile_ScanPolicyListError(t *testing.T) {
 		}).
 		WithScanPolicy(&v1alpha1.ScanPolicy{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "pol"},
-			Spec:       v1alpha1.ScanPolicySpec{Action: v1alpha1.ActionAutoRemediate, MinSeverity: v1alpha1.SeverityLow, Scanner: v1alpha1.ScannerGitleaks},
+			Spec:       v1alpha1.ScanPolicySpec{Action: v1alpha1.ActionAutoRemediate, MinSeverity: scanners.SeverityLow, Scanner: gitleaks.Name},
 		}).
 		WithConfigMap(&corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "cm"},
@@ -119,7 +121,7 @@ func TestReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "secret-detection-system", Name: "cm3-password"},
 				Spec: v1alpha1.ExposedSecretSpec{
 					Action:   v1alpha1.ActionIgnore,
-					Severity: v1alpha1.SeverityUnknown,
+					Severity: scanners.SeverityUnknown,
 				},
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm3"},
@@ -140,7 +142,7 @@ func TestReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "secret-detection-system", Name: "pol"},
 				Spec: v1alpha1.ScanPolicySpec{
 					Action:        v1alpha1.ActionReportOnly,
-					MinSeverity:   v1alpha1.SeverityCritical,
+					MinSeverity:   scanners.SeverityCritical,
 					Scanner:       test.DefaultScanner.Name(),
 					HashAlgorithm: v1alpha1.AlgorithmSHA256,
 				},
@@ -149,7 +151,7 @@ func TestReconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "secret-detection-system", Name: "cm4-password"},
 				Spec: v1alpha1.ExposedSecretSpec{
 					Action:   v1alpha1.ActionIgnore,
-					Severity: v1alpha1.SeverityUnknown,
+					Severity: scanners.SeverityUnknown,
 				},
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm4"},
@@ -195,8 +197,8 @@ func TestReconcile_AutoRemediate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "pol"},
 		Spec: v1alpha1.ScanPolicySpec{
 			Action:        v1alpha1.ActionAutoRemediate,
-			MinSeverity:   v1alpha1.SeverityLow,
-			Scanner:       v1alpha1.ScannerGitleaks,
+			MinSeverity:   scanners.SeverityLow,
+			Scanner:       gitleaks.Name,
 			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
 	}
@@ -264,7 +266,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "second"},
 		Spec: v1alpha1.ScanPolicySpec{
 			Action:        v1alpha1.ActionAutoRemediate,
-			MinSeverity:   v1alpha1.SeverityLow,
+			MinSeverity:   scanners.SeverityLow,
 			Scanner:       test.DefaultScanner.Name(),
 			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},
@@ -291,7 +293,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "cm-k"},
 				Spec: v1alpha1.ExposedSecretSpec{
 					Action:   v1alpha1.ActionIgnore,
-					Severity: v1alpha1.SeverityUnknown,
+					Severity: scanners.SeverityUnknown,
 				},
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm"},
@@ -348,7 +350,7 @@ func TestReconcile_AutoRemediate_WithConfigMapMutation(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "pol"},
 		Spec: v1alpha1.ScanPolicySpec{
 			Action:                  v1alpha1.ActionAutoRemediate,
-			MinSeverity:             v1alpha1.SeverityLow,
+			MinSeverity:             scanners.SeverityLow,
 			Scanner:                 test.DefaultScanner.Name(),
 			HashAlgorithm:           v1alpha1.AlgorithmSHA256,
 			EnableConfigMapMutation: true,
@@ -397,7 +399,7 @@ func TestReconcile_AutoRemediate_MultipleKeys(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "pol"},
 		Spec: v1alpha1.ScanPolicySpec{
 			Action:        v1alpha1.ActionAutoRemediate,
-			MinSeverity:   v1alpha1.SeverityLow,
+			MinSeverity:   scanners.SeverityLow,
 			Scanner:       test.DefaultScanner.Name(),
 			HashAlgorithm: v1alpha1.AlgorithmSHA256,
 		},

@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/lvlcn-t/secret-detection-operator/apis/validation"
+	"github.com/lvlcn-t/secret-detection-operator/scanners"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -18,7 +19,7 @@ type ExposedSecretBuilder struct {
 	override bool
 
 	policy   *ScanPolicy
-	severity Severity
+	severity scanners.Severity
 	hashAlgo HashAlgorithm
 }
 
@@ -36,7 +37,7 @@ func NewExposedSecretBuilder(cfg *corev1.ConfigMap, exposedKey string) *ExposedS
 			},
 			Spec: ExposedSecretSpec{
 				Action:   DefaultAction,
-				Severity: SeverityUnknown,
+				Severity: scanners.SeverityUnknown,
 				Notes:    "Automatically reported by the secret-detection-operator",
 			},
 			Status: ExposedSecretStatus{
@@ -89,7 +90,7 @@ func (b *ExposedSecretBuilder) WithExisting(es *ExposedSecret) *ExposedSecretBui
 	return b
 }
 
-func (b *ExposedSecretBuilder) WithSeverity(s Severity) *ExposedSecretBuilder {
+func (b *ExposedSecretBuilder) WithSeverity(s scanners.Severity) *ExposedSecretBuilder {
 	b.severity = s
 	b.Spec.Severity = s
 	return b

@@ -1,15 +1,13 @@
 package scanners
 
 import (
-	"testing"
-
-	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
+	"context"
 )
 
 //go:generate go tool moq -out scanner_moq.go . Scanner
 type Scanner interface {
 	// Name returns the name of the scanner.
-	Name() v1alpha1.ScannerName
+	Name() Name
 	// IsSecret checks if the given value is a secret.
 	// It returns true if the value is a secret, false otherwise.
 	IsSecret(value string) bool
@@ -22,27 +20,12 @@ type Scanner interface {
 	// 	- High: 4.0
 	// 	- Medium: 3.5
 	// 	- Low: < 3.5
-	DetectSeverity(value string) v1alpha1.Severity
+	DetectSeverity(value string) Severity
 }
 
-var _ Scanner = (*Gitleaks)(nil)
-
-var scanners = map[v1alpha1.ScannerName]Scanner{
-	v1alpha1.ScannerGitleaks: NewGitleaksScanner(),
-}
-
-// Get returns the scanner for the given name.
-// If the scanner is not found, it returns nil.
-func Get(name v1alpha1.ScannerName) Scanner {
-	if scanner, ok := scanners[name.Normalize()]; ok {
-		return scanner
-	}
-	return nil
-}
-
-// Set sets the scanner for the given name.
-// It is used for testing purposes to inject a different scanner implementation.
-func Set(t testing.TB, name v1alpha1.ScannerName, scanner Scanner) {
-	t.Helper()
-	scanners[name] = scanner
+type Config interface {
+	// Scanner returns a scanner instance configured with the provided settings.
+	// It should return an error if the configuration is invalid or if the scanner cannot be created.
+	// Due to import cycle issues, the caller must ensure that the scanner implements the [scanners.Scanner] interface.
+	Scanner(ctx context.Context) (Scanner, error)
 }

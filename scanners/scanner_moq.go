@@ -4,7 +4,6 @@
 package scanners
 
 import (
-	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	"sync"
 )
 
@@ -18,13 +17,13 @@ var _ Scanner = &ScannerMock{}
 //
 //		// make and configure a mocked Scanner
 //		mockedScanner := &ScannerMock{
-//			DetectSeverityFunc: func(value string) v1alpha1.Severity {
+//			DetectSeverityFunc: func(value string) Severity {
 //				panic("mock out the DetectSeverity method")
 //			},
 //			IsSecretFunc: func(value string) bool {
 //				panic("mock out the IsSecret method")
 //			},
-//			NameFunc: func() v1alpha1.ScannerName {
+//			NameFunc: func() Name {
 //				panic("mock out the Name method")
 //			},
 //		}
@@ -35,13 +34,13 @@ var _ Scanner = &ScannerMock{}
 //	}
 type ScannerMock struct {
 	// DetectSeverityFunc mocks the DetectSeverity method.
-	DetectSeverityFunc func(value string) v1alpha1.Severity
+	DetectSeverityFunc func(value string) Severity
 
 	// IsSecretFunc mocks the IsSecret method.
 	IsSecretFunc func(value string) bool
 
 	// NameFunc mocks the Name method.
-	NameFunc func() v1alpha1.ScannerName
+	NameFunc func() Name
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -65,7 +64,7 @@ type ScannerMock struct {
 }
 
 // DetectSeverity calls DetectSeverityFunc.
-func (mock *ScannerMock) DetectSeverity(value string) v1alpha1.Severity {
+func (mock *ScannerMock) DetectSeverity(value string) Severity {
 	if mock.DetectSeverityFunc == nil {
 		panic("ScannerMock.DetectSeverityFunc: method is nil but Scanner.DetectSeverity was just called")
 	}
@@ -129,7 +128,7 @@ func (mock *ScannerMock) IsSecretCalls() []struct {
 }
 
 // Name calls NameFunc.
-func (mock *ScannerMock) Name() v1alpha1.ScannerName {
+func (mock *ScannerMock) Name() Name {
 	if mock.NameFunc == nil {
 		panic("ScannerMock.NameFunc: method is nil but Scanner.Name was just called")
 	}

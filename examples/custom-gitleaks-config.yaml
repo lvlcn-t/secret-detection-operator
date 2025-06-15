@@ -1,0 +1,41 @@
+apiVersion: secretdetection.lvlcn-t.dev/v1alpha1
+kind: ScanPolicy
+metadata:
+  name: custom-gitleaks-config
+  namespace: default
+spec:
+  action: ReportOnly
+  minSeverity: Low
+  scanner: gitleaks
+  enableConfigMapMutation: false
+  gitleaksConfig:
+    useDefault: true # Extend default Gitleaks rules
+    rules:
+      # Custom rule for API keys
+      - id: custom-api-key
+        description: "Detect custom API key patterns"
+        regex: "api[_-]?key[_-]?[:=]\\s*[\"']?([a-zA-Z0-9]{32,})[\"']?"
+        secretGroup: 1
+        entropy: 3.5
+        keywords:
+          - "api"
+          - "key"
+
+      # Custom rule for database connection strings
+      - id: custom-db-connection
+        description: "Detect database connection strings"
+        regex: "(mongodb|mysql|postgres|postgresql)://[^\\s\"]++"
+        secretGroup: 0
+        entropy: 3.0
+
+    allowlist:
+      # Ignore test/example values
+      - description: "Ignore test and example values"
+        regex: "(test|example|sample|demo).*"
+
+      # Ignore specific non-sensitive patterns
+      - description: "Ignore documentation examples"
+        stopWords:
+          - "YOUR_API_KEY_HERE"
+          - "REPLACE_WITH_ACTUAL_KEY"
+          - "example.com"

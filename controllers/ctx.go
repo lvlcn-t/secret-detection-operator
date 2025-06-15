@@ -11,6 +11,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	"github.com/lvlcn-t/secret-detection-operator/scanners"
+	"github.com/lvlcn-t/secret-detection-operator/scanners/factory"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +40,6 @@ func newRecCtx(c client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMa
 	rc := &recCtx{
 		cl:        c,
 		policy:    policy,
-		scanner:   scanners.Get(policy.Spec.Scanner),
 		configMap: cm,
 	}
 	return rc
@@ -48,8 +48,12 @@ func newRecCtx(c client.Client, policy *v1alpha1.ScanPolicy, cm *corev1.ConfigMa
 // run executes the reconciliation for the ConfigMap: it scans for secret-like keys,
 // filters excluded keys, and processes each remaining key according to policy.
 func (rc *recCtx) run(ctx context.Context) error {
-	rc.ctx = ctx
-	rc.log = logr.FromContextAsSlogLogger(ctx).With("ConfigMap", rc.configMap.Name)
+	err := rc.initCtx(ctx)
+	if err != nil {
+		ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageCtxInit).Inc()
+		rc.log.ErrorContext(ctx, "Failed to initialize reconciliation context", "error", err)
+		return fmt.Errorf("failed to initialize reconciliation context: %w", err)
+	}
 
 	keys := rc.findSecretKeys()
 	KeysScanned.WithLabelValues(rc.configMap.Namespace).Observe(float64(len(rc.configMap.Data)))
@@ -64,13 +68,24 @@ func (rc *recCtx) run(ctx context.Context) error {
 			continue
 		}
 
-		if err := rc.process(key); err != nil {
+		if perr := rc.process(key); perr != nil {
 			ReconcileErrors.WithLabelValues(rc.configMap.Namespace, stageProcessKey).Inc()
-			rc.log.ErrorContext(ctx, "Failed to process key", "key", key, "error", err)
-			return err
+			rc.log.ErrorContext(ctx, "Failed to process key", "key", key, "error", perr)
+			return perr
 		}
 		rc.log.DebugContext(ctx, "Processed key", "key", key)
 	}
+	return nil
+}
+
+func (rc *recCtx) initCtx(ctx context.Context) error {
+	rc.ctx = ctx
+	rc.log = logr.FromContextAsSlogLogger(ctx).With("ConfigMap", rc.configMap.Name)
+	scanner, err := factory.Get(ctx, rc.policy.Spec.Scanner, scanners.Config(rc.policy.Spec.GitleaksConfig))
+	if err != nil {
+		return fmt.Errorf("failed to get scanner: %w", err)
+	}
+	rc.scanner = scanner
 	return nil
 }
 
@@ -136,7 +151,7 @@ func (rc *recCtx) doSideEffects(res ResolvedAction, builder *v1alpha1.ExposedSec
 	return nil
 }
 
-func (rc *recCtx) computeResolvedAction(b *v1alpha1.ExposedSecretBuilder, sev v1alpha1.Severity) ResolvedAction {
+func (rc *recCtx) computeResolvedAction(b *v1alpha1.ExposedSecretBuilder, sev scanners.Severity) ResolvedAction {
 	res := ActionResolver{
 		OverrideAction: b.ExistingAction(),
 		HasOverride:    b.Override(),

@@ -35,6 +35,11 @@ type ScanPolicySpec struct {
 	// +kubebuilder:validation:Enum=none;sha256;sha512
 	// +kubebuilder:default=none
 	HashAlgorithm HashAlgorithm `json:"hashAlgorithm,omitempty"`
+
+	// GitleaksConfig allows customization of Gitleaks scanner behavior.
+	// If not specified, the default Gitleaks configuration will be used.
+	// +optional
+	GitleaksConfig *GitleaksConfig `json:"gitleaksConfig,omitempty"`
 }
 
 // ScanPolicyStatus reflects observed configuration behavior or health.
