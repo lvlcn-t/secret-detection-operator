@@ -34,7 +34,7 @@ var scanners = map[v1alpha1.ScannerName]Scanner{
 // Get returns the scanner for the given name.
 // If the scanner is not found, it returns nil.
 func Get(name v1alpha1.ScannerName) Scanner {
-	if scanner, ok := scanners[name]; ok {
+	if scanner, ok := scanners[name.Normalize()]; ok {
 		return scanner
 	}
 	return nil

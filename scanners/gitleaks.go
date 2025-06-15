@@ -13,6 +13,7 @@ type Gitleaks struct {
 }
 
 func NewGitleaksScanner() *Gitleaks {
+	// TODO: let the user configure gitleaks config via scan policies
 	c := config.ViperConfig{
 		Extend: config.Extend{
 			UseDefault: true,

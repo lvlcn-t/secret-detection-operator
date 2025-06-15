@@ -5,6 +5,10 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Action represents the action to take when
@@ -100,6 +104,11 @@ type ScannerName string
 // String returns the string representation of the scanner name.
 func (s ScannerName) String() string {
 	return string(s)
+}
+
+// Normalize returns the scanner name in a normalized format (capitalized).
+func (s ScannerName) Normalize() ScannerName {
+	return ScannerName(cases.Title(language.English).String(strings.ToLower(s.String())))
 }
 
 const (
