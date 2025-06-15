@@ -12,6 +12,7 @@ require (
 	github.com/spf13/afero v1.14.0
 	github.com/stretchr/testify v1.10.0
 	github.com/zricethezav/gitleaks/v8 v8.27.2
+	go.uber.org/zap v1.27.0
 	k8s.io/api v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.1
@@ -104,7 +105,6 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect

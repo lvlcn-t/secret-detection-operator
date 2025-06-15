@@ -7,6 +7,7 @@ import (
 	"github.com/lvlcn-t/secret-detection-operator/apis/v1alpha1"
 	"github.com/lvlcn-t/secret-detection-operator/config"
 	"github.com/lvlcn-t/secret-detection-operator/controllers"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -36,7 +37,9 @@ func main() {
 	var configPath string
 	flag.StringVar(&configPath, "config", "", "Path to the configuration file")
 
-	opts := zap.Options{}
+	opts := zap.Options{
+		Level: zapcore.DebugLevel,
+	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
@@ -62,6 +65,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+	if err = cfg.Validate(ctx, mgr.GetClient()); err != nil {
+		setupLog.Error(err, "Invalid configuration")
+		os.Exit(1)
+	}
+	setupLog.Info("Configuration is valid")
+
 	controller := controllers.NewConfigMapReconciler(mgr.GetClient(), mgr.GetScheme(), cfg)
 	if err = controller.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Unable to create controller", "controller", "ConfigMap")
@@ -69,7 +79,7 @@ func main() {
 	}
 
 	setupLog.Info("Starting manager", "version", version)
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "Problem running manager")
 		os.Exit(1)
 	}
