@@ -85,7 +85,7 @@ You can define specific behaviors for reporting and remediation through customiz
 
 - **ConfigMap Mutation:** Optionally remove secret keys after migrating them.
 
-- **Scanner Engine:** Currently only `gitleaks` is supported, but more engines may be added in the future.
+- **Scanner Engine:** Currently only `Gitleaks` is supported, but more engines may be added in the future.
 
 - **Hash Algorithm:** Select how detected secrets are reported (`sha256`, `sha512`, or `none`). Note that `none` will report the raw value in `base64` format, which may not be secure.
 
@@ -104,7 +104,7 @@ spec:
     - non-secret-token
     - dummy-password
   enableConfigMapMutation: true
-  scanner: gitleaks
+  scanner: Gitleaks
   hashAlgorithm: sha256
 ```
 
@@ -124,7 +124,7 @@ spec:
   minSeverity: Medium
   excludedKeys: []
   enableConfigMapMutation: false
-  scanner: gitleaks
+  scanner: Gitleaks
   hashAlgorithm: none
 ```
 
@@ -150,7 +150,7 @@ status:
   ConfigMapRef:
     Name: example-config-map
   Key: example-key
-  Scanner: gitleaks
+  Scanner: Gitleaks
   DetectedValue: sha256:<hash>
   Phase: Detected
   Message: Secret detected in ConfigMap 'example-config-map' for key 'example-key'
@@ -174,7 +174,7 @@ status:
   ConfigMapRef:
     Name: example-config-map
   Key: example-key
-  Scanner: gitleaks
+  Scanner: Gitleaks
   DetectedValue: sha256:<hash>
   SecretRef:
     Name: example-config-map-example-key

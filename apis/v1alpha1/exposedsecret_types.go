@@ -46,7 +46,7 @@ type ExposedSecretStatus struct {
 	Key string `json:"key"`
 
 	// Scanner indicates the tool that detected the secret.
-	Scanner string `json:"scanner,omitempty"`
+	Scanner ScannerName `json:"scanner,omitempty"`
 
 	// DetectedValue is the found secret value as a hash.
 	DetectedValue string `json:"detectedValue,omitempty"`

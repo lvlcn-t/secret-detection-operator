@@ -75,7 +75,7 @@ func (b *ExposedSecretBuilder) WithPhase(phase Phase) *ExposedSecretBuilder {
 func (b *ExposedSecretBuilder) WithPolicy(policy *ScanPolicy) *ExposedSecretBuilder {
 	b.policy = policy
 	b.Annotations[AnnotationAppliedPolicy] = policy.Name
-	b.Status.Scanner = policy.Spec.Scanner.String()
+	b.Status.Scanner = policy.Spec.Scanner
 	b.hashAlgo = policy.Spec.HashAlgorithm
 	return b
 }

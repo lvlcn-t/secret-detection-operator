@@ -94,7 +94,7 @@ func TestReconcile(t *testing.T) {
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm2"},
 					Key:                "password",
-					Scanner:            test.DefaultScanner.Name().String(),
+					Scanner:            test.DefaultScanner.Name(),
 					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseDetected,
 				},
@@ -124,7 +124,7 @@ func TestReconcile(t *testing.T) {
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm3"},
 					Key:                "password",
-					Scanner:            test.DefaultScanner.Name().String(),
+					Scanner:            test.DefaultScanner.Name(),
 					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
@@ -154,7 +154,7 @@ func TestReconcile(t *testing.T) {
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm4"},
 					Key:                "password",
-					Scanner:            test.DefaultScanner.Name().String(),
+					Scanner:            test.DefaultScanner.Name(),
 					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
@@ -213,7 +213,7 @@ func TestReconcile_AutoRemediate(t *testing.T) {
 		Status: v1alpha1.ExposedSecretStatus{
 			ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm"},
 			Key:                "k",
-			Scanner:            test.DefaultScanner.Name().String(),
+			Scanner:            test.DefaultScanner.Name(),
 			DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 			Phase:              v1alpha1.PhaseRemediated,
 			CreatedSecretRef:   &v1alpha1.SecretReference{Name: "cm-k"},
@@ -296,7 +296,7 @@ func TestReconcile_MultipleScanPolicies(t *testing.T) {
 				Status: v1alpha1.ExposedSecretStatus{
 					ConfigMapReference: v1alpha1.ConfigMapReference{Name: "cm"},
 					Key:                "k",
-					Scanner:            test.DefaultScanner.Name().String(),
+					Scanner:            test.DefaultScanner.Name(),
 					DetectedValue:      v1alpha1.AlgorithmSHA256.Hash(secretValue),
 					Phase:              v1alpha1.PhaseIgnored,
 				},
@@ -329,7 +329,7 @@ func TestReconcile_MultipleSecretKeys_ReportOnly(t *testing.T) {
 			for _, es := range list.Items {
 				names[es.Name] = struct{}{}
 				require.Equal(t, v1alpha1.PhaseDetected, es.Status.Phase)
-				require.Equal(t, test.DefaultScanner.Name().String(), es.Status.Scanner)
+				require.Equal(t, test.DefaultScanner.Name(), es.Status.Scanner)
 			}
 			require.Contains(t, names, "cm-k1")
 			require.Contains(t, names, "cm-k2")
