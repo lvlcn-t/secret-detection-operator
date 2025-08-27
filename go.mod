@@ -10,7 +10,7 @@ require (
 	github.com/lvlcn-t/go-kit/config v0.3.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/spf13/afero v1.14.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/zricethezav/gitleaks/v8 v8.28.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/text v0.28.0
