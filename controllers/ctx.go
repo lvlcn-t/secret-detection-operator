@@ -127,9 +127,19 @@ func (rc *recCtx) process(key string) error {
 	}
 
 	es := builder.Build()
+	// Save the status before createOrUpdate, because the API server response
+	// from Update() overwrites es in-place and strips the status subresource.
+	savedStatus := es.Status
 	if err = rc.createOrUpdate(es); err != nil {
 		rc.log.ErrorContext(rc.ctx, "Failed to create or update ExposedSecret", "error", err)
 		return fmt.Errorf("failed to create or update ExposedSecret: %w", err)
+	}
+
+	// Restore the status so Status().Update() sends the correct populated status.
+	es.Status = savedStatus
+	if err = rc.cl.Status().Update(rc.ctx, es); err != nil {
+		rc.log.ErrorContext(rc.ctx, "Failed to update ExposedSecret status", "error", err)
+		return fmt.Errorf("failed to update ExposedSecret status: %w", err)
 	}
 	rc.log.DebugContext(rc.ctx, "Created or updated ExposedSecret")
 	return nil

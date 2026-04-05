@@ -30,7 +30,7 @@ func (f *Framework) Unit(t testing.TB) *Unittest {
 	require.NoError(t, cfg.Validate(t.Context(), fake.NewClientBuilder().WithScheme(scheme).Build()))
 	return &Unittest{
 		T:          t,
-		builder:    fake.NewClientBuilder().WithScheme(scheme),
+		builder:    fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&v1alpha1.ExposedSecret{}, &v1alpha1.ScanPolicy{}),
 		cfg:        cfg,
 		scheme:     scheme,
 		assertions: []func(*Unittest, ctrl.Result, error){},
