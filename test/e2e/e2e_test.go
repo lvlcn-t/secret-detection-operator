@@ -19,7 +19,7 @@ import (
 const detectedValue = "AKIAIOSFODNN7EXAMPLE"
 
 func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
-	e2e := newE2E(t)
+	e2e := test.NewFramework(t).E2E(t)
 	ctx := t.Context()
 	ns := e2e.AddNamespace("")
 
@@ -55,7 +55,7 @@ func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
 }
 
 func TestE2E_AutoRemediate(t *testing.T) {
-	e2e := newE2E(t)
+	e2e := test.NewFramework(t).E2E(t)
 	ctx := t.Context()
 	ns := e2e.AddNamespace("")
 
@@ -99,7 +99,7 @@ func TestE2E_AutoRemediate(t *testing.T) {
 }
 
 func TestE2E_ScanPolicyScoping(t *testing.T) {
-	e2e := newE2E(t)
+	e2e := test.NewFramework(t).E2E(t)
 	ctx := t.Context()
 	nsWithPolicy := e2e.AddNamespace("with-policy")
 	nsWithoutPolicy := e2e.AddNamespace("without-policy")
@@ -142,7 +142,7 @@ func TestE2E_ScanPolicyScoping(t *testing.T) {
 }
 
 func TestE2E_IgnoredViaPolicy(t *testing.T) {
-	e2e := newE2E(t)
+	e2e := test.NewFramework(t).E2E(t)
 	ctx := t.Context()
 	ns := e2e.AddNamespace("")
 
