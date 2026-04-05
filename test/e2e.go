@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	e2ePollInterval = time.Second
-	e2eWaitTimeout  = time.Minute
+	e2ePollInterval   = time.Second
+	e2eWaitTimeout    = time.Minute
+	e2ePolicySyncWait = 3 * time.Second
 )
 
 type E2E struct {
@@ -77,6 +78,9 @@ func (e *E2E) Run() {
 
 	for _, policy := range e.scanPolicy {
 		require.NoError(e.T, e.Client.Create(e.T.Context(), policy))
+	}
+	if len(e.scanPolicy) > 0 {
+		time.Sleep(e2ePolicySyncWait)
 	}
 
 	for _, cm := range e.configMaps {
