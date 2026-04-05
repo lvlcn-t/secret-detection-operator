@@ -16,7 +16,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const detectedValue = "ghp_" + "1234567890abcdef1234567890abcdef12345678"
+const (
+	reportOnlyDetectedValue    = "ghp_" + "1234567890abcdef1234567890abcdef12345678"
+	autoRemediateDetectedValue = "ghp_" + "1234567890abcdef1234567890abcdef12345679"
+	scopingDetectedValue       = "ghp_" + "1234567890abcdef1234567890abcdef1234567a"
+	ignoredDetectedValue       = "ghp_" + "1234567890abcdef1234567890abcdef1234567b"
+)
 
 func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
 	e2e := test.NewFramework(t).E2E(t)
@@ -35,7 +40,7 @@ func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: ns.Name},
-		Data:       map[string]string{"password": detectedValue},
+		Data:       map[string]string{"password": reportOnlyDetectedValue},
 	}
 
 	e2e.
@@ -46,7 +51,7 @@ func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, v1alpha1.ActionReportOnly, es.Spec.Action)
 			require.Equal(t, v1alpha1.PhaseDetected, es.Status.Phase)
-			require.Equal(t, v1alpha1.AlgorithmSHA256.Hash(detectedValue), es.Status.DetectedValue)
+			require.Equal(t, v1alpha1.AlgorithmSHA256.Hash(reportOnlyDetectedValue), es.Status.DetectedValue)
 			require.Equal(t, "cm", es.Status.ConfigMapReference.Name)
 			require.Equal(t, "password", es.Status.Key)
 			require.Equal(t, gitleaks.Name, es.Status.Scanner)
@@ -72,7 +77,7 @@ func TestE2E_AutoRemediate(t *testing.T) {
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: ns.Name},
-		Data:       map[string]string{"password": detectedValue},
+		Data:       map[string]string{"password": autoRemediateDetectedValue},
 	}
 
 	e2e.
@@ -88,7 +93,7 @@ func TestE2E_AutoRemediate(t *testing.T) {
 		WithAssertion(func(e *test.E2E) {
 			secret, err := e.WaitForSecret(ctx, ns.Name, "cm-password")
 			require.NoError(t, err)
-			require.Equal(t, detectedValue, string(secret.Data["password"]))
+			require.Equal(t, autoRemediateDetectedValue, string(secret.Data["password"]))
 		}).
 		WithAssertion(func(e *test.E2E) {
 			updatedCM, err := e.WaitForConfigMapKeyAbsent(ctx, ns.Name, "cm", "password")
@@ -116,12 +121,12 @@ func TestE2E_ScanPolicyScoping(t *testing.T) {
 
 	cmWithPolicy := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: nsWithPolicy.Name},
-		Data:       map[string]string{"password": detectedValue},
+		Data:       map[string]string{"password": scopingDetectedValue},
 	}
 
 	cmWithoutPolicy := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: nsWithoutPolicy.Name},
-		Data:       map[string]string{"password": detectedValue},
+		Data:       map[string]string{"password": scopingDetectedValue},
 	}
 
 	e2e.
@@ -158,7 +163,7 @@ func TestE2E_IgnoredViaPolicy(t *testing.T) {
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: ns.Name},
-		Data:       map[string]string{"password": detectedValue},
+		Data:       map[string]string{"password": ignoredDetectedValue},
 	}
 
 	e2e.
