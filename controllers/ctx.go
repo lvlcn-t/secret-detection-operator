@@ -86,6 +86,7 @@ func (rc *recCtx) initCtx(ctx context.Context) error {
 		return fmt.Errorf("failed to get scanner: %w", err)
 	}
 	rc.scanner = scanner
+	rc.policy.Spec.Scanner = scanner.Name()
 	return nil
 }
 

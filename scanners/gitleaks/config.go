@@ -40,6 +40,8 @@ func (e Entropy) Float64() (float64, error) {
 	return strconv.ParseFloat(string(e), 64)
 }
 
+// +kubebuilder:object:generate=true
+
 // Rule defines a custom rule for detecting secrets.
 type Rule struct {
 	// ID is a unique identifier for this rule.
@@ -71,6 +73,8 @@ type Rule struct {
 	// +optional
 	Keywords []string `json:"keywords,omitempty"`
 }
+
+// +kubebuilder:object:generate=true
 
 // AllowlistRule defines a pattern that should be ignored during scanning.
 type AllowlistRule struct {

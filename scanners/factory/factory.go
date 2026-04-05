@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/lvlcn-t/secret-detection-operator/scanners"
@@ -23,7 +24,7 @@ func newDefaultScanners() map[scanners.Name]scanners.Scanner {
 // Get returns the scanner for the given name with default configuration.
 // If the scanner is not found, it returns nil.
 func Get(ctx context.Context, name scanners.Name, cfg scanners.Config) (scanners.Scanner, error) {
-	if cfg != nil {
+	if !isNilConfig(cfg) {
 		return cfg.Scanner(ctx)
 	}
 
@@ -38,7 +39,7 @@ func Get(ctx context.Context, name scanners.Name, cfg scanners.Config) (scanners
 // It is used for testing purposes to inject a different scanner implementation.
 func Set(t testing.TB, name scanners.Name, scanner scanners.Scanner) {
 	t.Helper()
-	defaultScanners[name] = scanner
+	defaultScanners[name.Normalize()] = scanner
 }
 
 // NewScannerOrDie creates a new scanner using the provided function.
@@ -59,4 +60,17 @@ func NewScannerOrDie(t testing.TB, f func(ctx context.Context, cfg scanners.Conf
 		fail(fmt.Errorf("failed to create scanner: %w", err))
 	}
 	return scanner
+}
+
+func isNilConfig(cfg scanners.Config) bool {
+	if cfg == nil {
+		return true
+	}
+
+	v := reflect.ValueOf(cfg)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
 }
