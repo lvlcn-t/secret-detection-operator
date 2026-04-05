@@ -1,0 +1,72 @@
+name: E2E
+
+on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  e2e:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: e2e
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and load operator image
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          SHORT_SHA="${HEAD_SHA::7}"
+          IMAGE="ghcr.io/lvlcn-t/secret-detection-operator:commit-${SHORT_SHA}"
+          echo "Using image ${IMAGE}"
+          docker pull "${IMAGE}"
+          kind load docker-image "${IMAGE}" --name e2e
+
+      - name: Deploy operator
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          SHORT_SHA="${HEAD_SHA::7}"
+          helm install secret-detection-operator ./chart \
+            --namespace secret-detection-system \
+            --create-namespace \
+            --set image.repository=ghcr.io/lvlcn-t/secret-detection-operator \
+            --set image.tag="commit-${SHORT_SHA}" \
+            --set image.pullPolicy=Never \
+            --set serviceMonitor.enabled=false \
+            --wait \
+            --timeout 180s
+
+      - name: Run e2e tests
+        run: go test -tags=e2e -v -race -count=1 ./test/e2e/...
+
+      - name: Dump diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get all -A
+          kubectl get scanpolicies,exposedsecrets -A || true
+          kubectl logs -n secret-detection-system deploy/secret-detection-operator-secret-detection-operator || true

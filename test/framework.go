@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -34,6 +35,20 @@ func (f *Framework) Unit(t testing.TB) *Unittest {
 		cfg:        cfg,
 		scheme:     scheme,
 		assertions: []func(*Unittest, ctrl.Result, error){},
+	}
+}
+
+func (f *Framework) E2E(t testing.TB) *E2E {
+	f.T.Helper()
+	markLong(t)
+	scheme := newScheme(t)
+	cfg := ctrl.GetConfigOrDie()
+	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	require.NoError(t, err)
+
+	return &E2E{
+		T:      t,
+		Client: cl,
 	}
 }
 
@@ -63,9 +78,6 @@ func markShort(t testing.TB) {
 		t.Skip("To run this test, please use the -test.short flag")
 	}
 }
-
-// TODO: remove this once we use the framework for e2e tests.
-var _ = markLong
 
 // markLong marks the test as long-running. It will skip the test if the -test.short flag is set.
 func markLong(t testing.TB) {
