@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-const detectedValue = "AKIAIOSFODNN7EXAMPLE"
+const detectedValue = "ghp_" + "1234567890abcdef1234567890abcdef12345678"
 
 func TestE2E_DetectSecret_ReportOnly(t *testing.T) {
 	e2e := test.NewFramework(t).E2E(t)
