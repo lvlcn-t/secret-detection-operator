@@ -19,7 +19,7 @@ import (
 var _ reconcile.Reconciler = (*ConfigMapReconciler)(nil)
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=create;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=exposedsecrets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=secretdetection.lvlcn-t.dev,resources=scanpolicies,verbs=get;list;watch;create;update;patch
