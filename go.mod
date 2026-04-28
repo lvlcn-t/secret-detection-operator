@@ -12,7 +12,7 @@ require (
 	github.com/spf13/afero v1.15.0
 	github.com/stretchr/testify v1.11.1
 	github.com/zricethezav/gitleaks/v8 v8.30.1
-	go.uber.org/zap v1.27.1
+	go.uber.org/zap v1.28.0
 	golang.org/x/text v0.36.0
 	k8s.io/api v0.36.0
 	k8s.io/apimachinery v0.36.0
