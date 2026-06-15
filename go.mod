@@ -14,8 +14,8 @@ require (
 	github.com/zricethezav/gitleaks/v8 v8.30.1
 	go.uber.org/zap v1.28.0
 	golang.org/x/text v0.38.0
-	k8s.io/api v0.36.1
-	k8s.io/apimachinery v0.36.1
+	k8s.io/api v0.36.2
+	k8s.io/apimachinery v0.36.2
 	k8s.io/client-go v0.36.1
 	sigs.k8s.io/controller-runtime v0.24.1
 )
